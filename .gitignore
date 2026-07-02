@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local external repositories
+external/gym-pybullet-drones/
+external/NavRL/
+
+# Experiment outputs and large artifacts
+results/
+runs/
+wandb/
+*.zip
+*.pt
+*.pth
+*.onnx
+*.mp4
+*.gif
+*.avi
+*.mkv
+*.log
+
+# Environment and editor files
+.env
+.venv/
+venv/
+.DS_Store
+.vscode/
+.idea/
