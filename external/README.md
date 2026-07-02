@@ -1,21 +1,21 @@
-# External repositories
+# 外部仓库
 
-This directory is reserved for local clones of external repositories.
+本目录用于本地克隆外部仓库。
 
-Recommended local layout:
+推荐本地结构：
 
 ```bash
 external/gym-pybullet-drones/
 external/NavRL/
 ```
 
-These folders are ignored by git by default. They should not be committed unless a future task explicitly decides to use submodules or vendored snapshots.
+这些目录默认被 `.gitignore` 忽略，不应直接提交。除非后续任务明确决定使用 submodule 或 vendored snapshot，否则只保留本地克隆。
 
-## Clone commands
+## 克隆命令
 
 ```bash
 git clone https://github.com/learnsyslab/gym-pybullet-drones.git external/gym-pybullet-drones
 git clone https://github.com/Zhefan-Xu/NavRL.git external/NavRL
 ```
 
-`gym-pybullet-drones` is the Phase 1 training backbone. `NavRL` is reference-only in Phase 1.
+`gym-pybullet-drones` 是第一阶段训练底座。`NavRL` 在第一阶段只作为参考。
