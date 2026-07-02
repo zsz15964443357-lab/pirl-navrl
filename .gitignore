@@ -13,6 +13,7 @@ external/NavRL/
 # Experiment outputs and large artifacts
 results/
 runs/
+tmp/
 wandb/
 *.zip
 *.pt

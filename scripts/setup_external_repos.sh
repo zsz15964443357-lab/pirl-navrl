@@ -15,6 +15,12 @@ clone_or_report() {
       echo "        Remove it, then rerun this script." >&2
       return 1
     fi
+    if [[ -n "$(git -C "${dest}" status --porcelain)" ]]; then
+      echo "[error] ${dest} exists but has uncommitted changes or an incomplete checkout." >&2
+      echo "        Inspect it with: git -C ${dest} status --short" >&2
+      echo "        If this is a failed clone, remove it and rerun this script." >&2
+      return 1
+    fi
     echo "[ok] ${name} already exists at ${dest}"
     git -C "${dest}" remote -v | sed 's/^/[remote] /'
     return 0
