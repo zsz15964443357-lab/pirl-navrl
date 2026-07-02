@@ -1,60 +1,60 @@
-# TASK 01: gym-pybullet-drones Phase 1 setup and simple PIRL-NavRL demo
+# TASK 01：gym-pybullet-drones 第一阶段环境配置与简单演示
 
-## Status
+## 状态
 
-Open.
+Open。
 
-## Required skill
+## 必须使用的技能
 
-Use the academic-research-suite skill.
+使用 academic-research-suite skill。
 
-## Repository
+## 仓库
 
 `https://github.com/zsz15964443357-lab/pirl-navrl`
 
-## Objective
+## 目标
 
-Initialize Phase 1 around `gym-pybullet-drones` as the lightweight UAV PyBullet training backbone, while pulling NavRL as a long-term reference only.
+围绕 `gym-pybullet-drones` 初始化第一阶段。它是当前轻量级无人机 PyBullet 训练底座。NavRL 只作为长期参考。
 
-This task establishes environment setup, external repository references, and a simple PIRL-NavRL adapter/risk/shield integration demo. It must not claim paper-grade results.
+本任务要完成环境配置、外部仓库拉取、基础检查，以及一个简单的 PIRL-NavRL adapter / risk / shield 集成演示。本任务不得声称论文级结果。
 
-## Strategic decisions
+## 战略决策
 
-- Do not use old `pirl-nav-research` active code.
-- Do not implement a custom simulator from scratch.
-- Do not use Isaac Sim as the immediate training backend.
-- Do not use ROS1/ROS2 as the immediate deployment backend.
-- Do not train NavRL in this phase.
-- Do not claim paper results.
-- Do not create synthetic training metrics.
-- Do not commit large generated artifacts.
+- 不使用旧 `pirl-nav-research` 的有效代码。
+- 不从零写自定义仿真器。
+- 不使用 Isaac Sim 作为当前训练后端。
+- 不使用 ROS1/ROS2 作为当前部署后端。
+- 不训练 NavRL。
+- 不声称论文结果。
+- 不创建合成训练指标来冒充实验结果。
+- 不提交大产物。
 
-## External repositories
+## 外部仓库
 
-Primary implementation backbone:
+当前主底座：
 
 - `https://github.com/learnsyslab/gym-pybullet-drones`
 
-Reference-only backbone:
+长期参考：
 
 - `https://github.com/Zhefan-Xu/NavRL`
 
-## Required work
+## 必做工作
 
-### 1. External setup
+### 1. 外部仓库 setup
 
-Create or update `scripts/setup_external_repos.sh` to clone:
+创建或更新 `scripts/setup_external_repos.sh`，用于克隆：
 
 ```bash
 git clone https://github.com/learnsyslab/gym-pybullet-drones.git external/gym-pybullet-drones
 git clone https://github.com/Zhefan-Xu/NavRL.git external/NavRL
 ```
 
-The script must be idempotent or fail gracefully with clear instructions if folders already exist.
+脚本必须具备幂等性，或在目录已存在时给出清晰提示。
 
-### 2. Environment setup
+### 2. 环境配置
 
-Document and support this environment path:
+文档和脚本应支持如下环境路径：
 
 ```bash
 conda create -n pirl-navrl-drones python=3.10
@@ -63,34 +63,34 @@ pip install -e external/gym-pybullet-drones
 pip install -e .
 ```
 
-Create `scripts/check_gym_pybullet_drones_install.py` to verify imports:
+创建 `scripts/check_gym_pybullet_drones_install.py`，检查导入：
 
 - `gym_pybullet_drones`
 - `stable_baselines3`
 - `pybullet`
 - `pirl_navrl`
 
-If dependencies are absent, the script must fail gracefully and print setup instructions.
+如果依赖不存在，脚本必须优雅失败，并打印安装说明。
 
-### 3. Built-in example check
+### 3. 内置示例检查
 
-Create `scripts/run_gym_pybullet_drones_examples.py` to document or safely launch built-in gym-pybullet-drones examples.
+创建 `scripts/run_gym_pybullet_drones_examples.py`，用于说明或安全启动 gym-pybullet-drones 的内置示例。
 
-Acceptable examples include built-in PID or RL examples from the external repository. The script must avoid committing generated videos, checkpoints, or large outputs.
+可以使用 PID 或 RL 示例。脚本不得提交或默认生成视频、checkpoint、大日志。
 
-### 4. PIRL-NavRL simple demo
+### 4. PIRL-NavRL 简单演示
 
-Create a small integration demo around gym-pybullet-drones without rewriting its simulator.
+围绕 gym-pybullet-drones 创建一个小型集成演示，不得重写仿真器。
 
-Required components:
+演示必须包含：
 
-- observation/action adapter
+- observation / action adapter
 - action-conditioned risk scorer
 - threshold-based shield wrapper
 - intervention logging
-- small JSON or JSONL metric output
+- 小型 JSON 或 JSONL 指标输出
 
-Required source paths:
+建议源码路径：
 
 - `pirl_navrl/adapters/gym_pybullet_drones_adapter.py`
 - `pirl_navrl/risk/action_conditioned_risk.py`
@@ -98,64 +98,64 @@ Required source paths:
 - `pirl_navrl/metrics/episode_metrics.py`
 - `scripts/run_phase1_simple_pirl_navrl_demo.py`
 
-The simple risk/shield demo may be heuristic in Phase 1, but it must clearly label outputs as diagnostic, not paper results.
+第一阶段的 risk / shield 可以是启发式实现，但输出必须标注为 diagnostic，不得标注为 paper result。
 
-### 5. Tests
+### 5. 测试
 
-Create and run tests:
+创建并运行：
 
 - `tests/test_imports.py`
 - `tests/test_phase1_config_schema.py`
 - `tests/test_risk_shield_contract.py`
 
-Tests must not require Isaac Sim, ROS, GPU, NavRL training, or large external artifacts.
+测试不得依赖 Isaac Sim、ROS、GPU、NavRL 训练或大型外部产物。
 
-## Artifact policy
+## 产物策略
 
-Do not commit:
+禁止提交：
 
-- checkpoints
-- `.zip` model files
-- TensorBoard logs
-- wandb runs
-- videos
-- GIFs
-- large rollout dumps
-- copied external repositories
+- checkpoint
+- `.zip` 模型文件
+- TensorBoard 日志
+- wandb 运行记录
+- 视频
+- GIF
+- 大型 rollout dump
+- 被复制进仓库的外部项目源码
 
-Allowed:
+允许提交：
 
-- source code
-- tests
-- Markdown documentation
-- small YAML configs
-- small JSON/JSONL diagnostic summaries
+- 源码
+- 测试
+- Markdown 文档
+- 小型 YAML 配置
+- 小型 JSON/JSONL 诊断结果
 
-## Acceptance criteria
+## 验收标准
 
-- Repository imports pass.
-- External setup script exists and documents/pulls both repositories.
-- Install check script verifies or gracefully explains missing dependencies.
-- Built-in gym-pybullet-drones example flow is documented or runnable.
-- Simple PIRL-NavRL risk/shield demo exists.
-- Tests pass or blockers are explicitly documented.
-- No custom simulator is created.
-- No old repository active code is copied.
-- No Isaac Sim or ROS dependency is introduced.
-- No large generated artifacts are committed.
+- 仓库 import 通过。
+- 外部仓库 setup 脚本存在，并能拉取或清晰说明如何拉取两个仓库。
+- 安装检查脚本能验证依赖，或在缺依赖时清晰提示。
+- gym-pybullet-drones 内置示例流程被记录或可运行。
+- 简单 PIRL-NavRL risk/shield demo 存在。
+- 测试通过，或阻塞项被明确记录。
+- 未创建自定义仿真器。
+- 未复制旧仓库有效代码。
+- 未引入 Isaac Sim 或 ROS 依赖。
+- 未提交大产物。
 
-## Final report requirements
+## Codex 最终报告要求
 
-Codex final report must include:
+报告必须包含：
 
-- branch and commit
-- files created/modified
-- commands run
-- dependency status
-- whether gym-pybullet-drones import succeeded
-- whether built-in examples ran
-- whether Phase 1 demo ran
-- test results
-- artifacts generated
-- known blockers
-- next manual decision required
+- 分支和 commit
+- 新增/修改文件
+- 运行命令
+- 依赖状态
+- gym-pybullet-drones import 是否成功
+- 内置示例是否运行
+- 第一阶段 demo 是否运行
+- 测试结果
+- 生成产物
+- 已知阻塞
+- 下一步需要人工决定的问题
