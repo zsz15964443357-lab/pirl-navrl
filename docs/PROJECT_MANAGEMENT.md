@@ -12,7 +12,8 @@
 
 - 所有实现工作必须由 `codex_tasks/` 下的编号任务驱动。
 - 不允许无任务实现。
-- 当前任务没有实现、审查、修正和确认前，不创建下一阶段任务。
+- 当前任务没有实现、审查、修正和确认前，原则上不执行下一阶段任务。
+- 可以提前整理下一阶段任务文档，但必须标注为“计划中”，并说明执行前置条件。
 - 每个任务必须写清楚：目标、范围、禁止项、验收标准、最终报告要求。
 - 每个任务必须标注输出性质：环境诊断、训练诊断、论文候选结果，三者不能混淆。
 
@@ -20,12 +21,21 @@
 
 第一阶段使用 gym-pybullet-drones 作为轻量级无人机 PyBullet 训练底座。NavRL 仅作为长期参考。
 
+第二阶段允许在任务边界内探索 EGO-Planner 官方 ROS sidecar bridge，但该探索仅用于 diagnostic，不代表当前主训练平台切换到 ROS。
+
+当前原则：
+
+- gym-pybullet-drones 是早期主平台。
+- EGO-Planner 是 official sidecar bridge 可行性验证对象，后续是否作为 official baseline 取决于 TASK_02 结论。
+- NavRL 是链路、结构、模块划分、部署路径和参数组织参考，不作为 baseline。
+
 当前禁止：
 
 - 不使用 Isaac Sim 训练
 - 不做 ROS 部署
 - 不从零写仿真器
 - 不复制旧 `pirl-nav-research` 的有效代码
+- 不把 NavRL 当作 baseline
 - 不声称论文级结果
 
 ## 4. 产物管理
@@ -77,7 +87,7 @@
 
 ## 7. 论文级升级规则
 
-第一阶段输出不是论文结果。进入论文级实验前，必须另开任务并明确：
+第一阶段和第二阶段输出都不是论文结果。进入论文级实验前，必须另开任务并明确：
 
 - 固定 train/eval protocol
 - baseline matrix
@@ -87,6 +97,10 @@
 - 图表生成方式
 - 可复现记录
 - 产物提交策略
+
+如果使用 EGO-Planner official sidecar 作为论文 baseline，必须另开任务并明确官方代码 commit、bridge 改动、平台差异和结果解释边界。
+
+NavRL 不进入 baseline matrix。NavRL 只能作为参考架构或未来跨平台迁移路线的参考对象。
 
 ## 8. 结构简约原则
 
