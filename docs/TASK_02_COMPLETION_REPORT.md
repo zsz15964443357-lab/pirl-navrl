@@ -88,28 +88,6 @@ Official EGO sidecar Docker validation:
 - `roslaunch ego_planner run_in_sim.launch`: starts ROS master and EGO nodes.
 - `/planning/pos_cmd`: produced after publishing `/move_base_simple/goal`.
 - `roslaunch ego_planner simple_run.launch`: starts RViz through X11.
-- `bash scripts/run_ego_pybullet_bridge_visual.sh`: publishes PyBullet-side odometry/pointcloud to official EGO, tracks `/planning/pos_cmd`, and renders a PyBullet GIF/MP4.
-
-Official EGO -> PyBullet bridge visualization:
-
-```text
-results/ego_pybullet_bridge/official_ego_pybullet_trace.jsonl
-results/ego_pybullet_bridge/official_ego_pybullet_bridge.gif
-results/ego_pybullet_bridge/official_ego_pybullet_bridge.mp4
-```
-
-Latest diagnostic summary:
-
-```json
-{
-  "records": 258,
-  "first_command_step": 61,
-  "final_distance_to_goal": 0.3296130356263231,
-  "min_clearance": -0.4203350353828719
-}
-```
-
-The negative clearance means the current simple command tracker and bridge setup are not yet an obstacle-avoidance-quality result. It only verifies that official EGO command output is connected into the PyBullet diagnostic renderer.
 
 Official EGO simulator mirror into PyBullet:
 
@@ -147,39 +125,19 @@ Local headless validation:
 }
 ```
 
-Live PyBullet GUI:
-
-```bash
-bash scripts/run_ego_pybullet_live_gui.sh
-```
-
-This opens a PyBullet GUI directly instead of generating GIF/MP4. The live path
-uses the same official EGO sidecar topics and writes:
-
-```text
-results/ego_pybullet_live/live_trace.jsonl
-results/ego_pybullet_live/live_ros.log
-```
-
-The PyBullet live viewer no longer renders debug text by default because
-PyBullet text can be blurry, misplaced, or font-dependent.
-
 Interface audit against EGO source:
 
 - `EGOReplanFSM::odometryCallback` consumes `/odom_world`; the launch remaps this to `/visual_slam/odom`.
 - `GridMap::odomCallback` consumes `/grid_map/odom`; the launch remaps this to `/visual_slam/odom`.
-- `GridMap::cloudCallback` consumes `/grid_map/cloud`; the launch remaps this to `/pirl_navrl/cloud`.
+- The official simulator supplies local sensing through `pcl_render_node` and the global map through `/map_generator/global_cloud`.
 - `waypoint_generator` consumes `/move_base_simple/goal`.
 - `traj_server` publishes `quadrotor_msgs/PositionCommand` on `/planning/pos_cmd`.
 - All bridge messages use frame `world`, matching EGO `grid_map/frame_id` and `traj_server`.
 
 Effect audit:
 
-- The `ego_mockamap_box_v0` scene produces official EGO command output with lateral motion, so the planner is receiving the map/odom/goal contract.
-- The current simple PyBullet point-mass tracker is not equivalent to the original repository's SO3 controller.
-- Latest headless run received commands but still had `min_clearance = -0.3122420983811688`.
-- ROS logs show repeated `A star path searching !!! 0.2 seconds time limit exceeded` in the more complex bridge scene.
-- Therefore the simplified bridge interface is connected, but its visual effect is not consistent with the original EGO simulator quality.
+- The removed simplified bridge produced official EGO command output, but it used a Python point-mass tracker instead of the original SO3 controller and was not equivalent to the original simulator.
+- That simplified route also generated noisy PyBullet visuals and negative-clearance diagnostic runs, so it was deleted from the active script set.
 - For original EGO visual quality and behavior in PyBullet, use `bash scripts/run_official_ego_pybullet_mirror.sh`. For original RViz visualization, use `bash scripts/run_ego_planner_noetic_docker.sh rviz`.
 
 ## 生成产物
@@ -192,7 +150,6 @@ Effect audit:
 
 - 主机原生 ROS sidecar 未安装；官方 EGO sidecar 目前通过 Docker Noetic 运行。
 - 当前 Python command bridge 只输出 desired velocity 和 normalized action-like vector，还没有绑定到具体 gym-pybullet-drones action mode。
-- 当前 official EGO -> PyBullet run 已能接收 `/planning/pos_cmd` 并打开 PyBullet live GUI，但最小 clearance 为负，不能作为避障效果或 baseline 结果。
 - 新增的 official EGO mirror 会显示原仓 simulator 结果，但 PyBullet 在该路线中是可视化镜像，不是替代原仓动力学的控制后端。
 - Obstacle bridge 第一版只支持静态 cylinder/sphere -> synthetic pointcloud。
 - `ego_like_static_v0` 是工程诊断场景，不是 EGO 官方场景复现。

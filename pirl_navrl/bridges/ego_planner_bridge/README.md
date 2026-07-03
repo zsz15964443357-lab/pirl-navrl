@@ -123,61 +123,11 @@ python3 scripts/view_official_ego_pybullet_mirror.py \
   --map-style points
 ```
 
-## Simplified PyBullet Diagnostic Visualization
+## Removed Simplified PyBullet Bridge
 
-Run the end-to-end diagnostic bridge:
-
-```bash
-bash scripts/run_ego_pybullet_bridge_visual.sh
-```
-
-This starts the official EGO sidecar in the Noetic Docker container, publishes
-the `ego_like_static_v0` odometry and synthetic pointcloud from the bridge node,
-tracks `/planning/pos_cmd`, and renders the resulting PyBullet trace.
-
-Outputs:
-
-```text
-results/ego_pybullet_bridge/official_ego_pybullet_trace.jsonl
-results/ego_pybullet_bridge/official_ego_pybullet_bridge.gif
-results/ego_pybullet_bridge/official_ego_pybullet_bridge.mp4
-```
-
-Observed diagnostic run:
-
-- `/planning/pos_cmd` was received.
-- Final goal distance was about `0.33 m`.
-- Minimum clearance was negative, so this is a connectivity visualization, not
-  a valid obstacle-avoidance result.
-
-## Simplified Live PyBullet GUI
-
-Run without generating GIF or video:
-
-```bash
-bash scripts/run_ego_pybullet_live_gui.sh
-```
-
-This starts the official EGO-Planner sidecar in Docker and opens a live PyBullet
-GUI on the host. The default scene is `ego_mockamap_box_v0`, a small
-mockamap-style box-obstacle scene. The GUI shows:
-
-- red boxes: synthetic obstacle pointcloud source
-- yellow sphere/line: tracked PyBullet diagnostic state
-- green line: official EGO `/planning/pos_cmd`
-
-No PyBullet debug text is shown by default because the GUI text rendering can
-be misaligned or visually noisy.
-
-Interface review status:
-
-- Odometry topic: `/visual_slam/odom` remapped to EGO `/odom_world` and `/grid_map/odom`.
-- Obstacle topic: `/pirl_navrl/cloud` remapped to EGO `/grid_map/cloud`.
-- Goal topic: `/move_base_simple/goal` consumed by EGO `waypoint_generator`.
-- Command topic: `/planning/pos_cmd` from EGO `traj_server`.
-- Frame: `world`, matching EGO `grid_map/frame_id` and `traj_server` output.
-
-Root cause of the poor visual/effect match in this simplified live bridge:
+The earlier simplified ROS/PyBullet bridge was removed from the active scripts
+because it was useful only for topic-connectivity debugging and produced a
+misleading visual result:
 
 - The original EGO loop is `map_generator/mockamap -> pcl_render_node ->
   EGO grid map/planner -> traj_server -> so3_control ->
@@ -188,10 +138,7 @@ Root cause of the poor visual/effect match in this simplified live bridge:
   quadrotor dynamics, so it can verify topic connectivity but not original
   avoidance quality.
 
-Do not treat this simplified live view as a baseline-quality avoidance result.
-
-For the original repository's visual quality and avoidance behavior, use the
-official mirror or RViz route instead:
+For original repository behavior, use only the official mirror or RViz route:
 
 ```bash
 bash scripts/run_official_ego_pybullet_mirror.sh
