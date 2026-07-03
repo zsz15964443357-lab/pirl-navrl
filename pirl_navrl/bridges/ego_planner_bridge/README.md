@@ -91,7 +91,8 @@ local sensing, EGO planner, `traj_server`, SO3 controller, and quadrotor
 simulator. The host PyBullet window is only a live mirror of the official ROS
 topics:
 
-- red points: official `/map_generator/global_cloud`
+- red voxel columns: official `/map_generator/global_cloud`, downsampled into
+  clear PyBullet obstacle blocks
 - yellow sphere/line: official `/visual_slam/odom`
 - green line: official `/planning/pos_cmd`
 - green sphere: the published `/move_base_simple/goal`
@@ -112,6 +113,15 @@ Short local validation on this machine:
 This is the route to use when the question is whether the visualized behavior
 matches the original repository. It mirrors original EGO simulator behavior
 instead of replacing the original controller with a Python point-mass tracker.
+
+The PyBullet mirror renders obstacle maps as regular voxel columns by default.
+For debugging the raw pointcloud instead:
+
+```bash
+python3 scripts/view_official_ego_pybullet_mirror.py \
+  --trace results/ego_official_mirror/live_trace.jsonl \
+  --map-style points
+```
 
 ## Simplified PyBullet Diagnostic Visualization
 

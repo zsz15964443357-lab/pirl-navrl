@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import time
 from pathlib import Path
 
@@ -22,6 +23,9 @@ class OfficialEgoMirrorViewer:
         startup_timeout: float,
         show_text: bool,
         point_size: float,
+        map_style: str,
+        voxel_size: float,
+        max_voxels: int,
     ) -> None:
         self.trace_path = trace_path
         self.direct = direct
@@ -29,6 +33,9 @@ class OfficialEgoMirrorViewer:
         self.startup_timeout = startup_timeout
         self.show_text = show_text
         self.point_size = point_size
+        self.map_style = map_style
+        self.voxel_size = voxel_size
+        self.max_voxels = max_voxels
         self.client = None
         self.drone = None
         self.goal_marker = None
@@ -148,14 +155,34 @@ class OfficialEgoMirrorViewer:
     def create_map(self, points: list[list[float]]) -> None:
         if not points:
             return
-        colors = [[0.72, 0.18, 0.12] for _ in points]
-        p.addUserDebugPoints(
-            points,
-            colors,
-            pointSize=self.point_size,
-            lifeTime=0,
-            physicsClientId=self.client,
-        )
+        if self.map_style in {"voxels", "both"}:
+            self.create_voxel_map(points)
+        if self.map_style in {"points", "both"}:
+            colors = [[0.9, 0.18, 0.08] for _ in points]
+            p.addUserDebugPoints(
+                points,
+                colors,
+                pointSize=self.point_size,
+                lifeTime=0,
+                physicsClientId=self.client,
+            )
+
+    def create_voxel_map(self, points: list[list[float]]) -> None:
+        columns = voxel_columns(points, self.voxel_size, self.max_voxels)
+        for center, half_extents in columns:
+            visual = p.createVisualShape(
+                p.GEOM_BOX,
+                halfExtents=half_extents,
+                rgbaColor=[0.86, 0.12, 0.06, 0.88],
+                physicsClientId=self.client,
+            )
+            p.createMultiBody(
+                baseMass=0.0,
+                baseCollisionShapeIndex=-1,
+                baseVisualShapeIndex=visual,
+                basePosition=center,
+                physicsClientId=self.client,
+            )
 
     def create_goal_marker(self, goal: list[float] | None) -> None:
         if goal is None or self.goal_marker is not None:
@@ -186,7 +213,46 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--startup-timeout", type=float, default=90.0)
     parser.add_argument("--show-text", action="store_true")
     parser.add_argument("--point-size", type=float, default=2.2)
+    parser.add_argument("--map-style", choices=("voxels", "points", "both"), default="voxels")
+    parser.add_argument("--voxel-size", type=float, default=0.85)
+    parser.add_argument("--max-voxels", type=int, default=900)
     return parser.parse_args()
+
+
+def voxel_columns(
+    points: list[list[float]],
+    voxel_size: float,
+    max_voxels: int,
+) -> list[tuple[list[float], list[float]]]:
+    bins: dict[tuple[int, int], list[float]] = {}
+    for point in points:
+        ix = math.floor(point[0] / voxel_size)
+        iy = math.floor(point[1] / voxel_size)
+        key = (ix, iy)
+        z_value = point[2]
+        if key not in bins:
+            bins[key] = [point[0], point[1], z_value, z_value, 1.0]
+            continue
+        item = bins[key]
+        item[0] += point[0]
+        item[1] += point[1]
+        item[2] = min(item[2], z_value)
+        item[3] = max(item[3], z_value)
+        item[4] += 1.0
+
+    ranked = sorted(bins.values(), key=lambda item: (-item[4], item[0] / item[4], item[1] / item[4]))
+    columns = []
+    half_xy = voxel_size * 0.43
+    for item in ranked[:max_voxels]:
+        count = item[4]
+        x = item[0] / count
+        y = item[1] / count
+        z_min = max(0.0, item[2])
+        z_max = max(z_min + voxel_size * 0.7, item[3])
+        center = [x, y, (z_min + z_max) / 2.0]
+        half_extents = [half_xy, half_xy, max(0.18, (z_max - z_min) / 2.0)]
+        columns.append((center, half_extents))
+    return columns
 
 
 def main() -> None:
@@ -198,6 +264,9 @@ def main() -> None:
         startup_timeout=args.startup_timeout,
         show_text=args.show_text,
         point_size=args.point_size,
+        map_style=args.map_style,
+        voxel_size=args.voxel_size,
+        max_voxels=args.max_voxels,
     )
     try:
         viewer.run()

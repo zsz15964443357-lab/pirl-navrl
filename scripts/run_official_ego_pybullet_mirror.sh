@@ -14,6 +14,7 @@ DURATION="${EGO_MIRROR_DURATION:-90}"
 GOAL_X="${EGO_MIRROR_GOAL_X:--8.0}"
 GOAL_Y="${EGO_MIRROR_GOAL_Y:-10.0}"
 GOAL_Z="${EGO_MIRROR_GOAL_Z:-1.0}"
+MAP_POINTS="${EGO_MIRROR_MAP_POINTS:-20000}"
 
 usage() {
   cat <<'EOF'
@@ -27,6 +28,7 @@ Optional environment variables:
   EGO_MIRROR_GOAL_X=-8.0
   EGO_MIRROR_GOAL_Y=10.0
   EGO_MIRROR_GOAL_Z=1.0
+  EGO_MIRROR_MAP_POINTS=20000
 EOF
 }
 
@@ -69,7 +71,8 @@ docker run --rm \
       --duration '${DURATION}' \
       --goal-x '${GOAL_X}' \
       --goal-y '${GOAL_Y}' \
-      --goal-z '${GOAL_Z}'
+      --goal-z '${GOAL_Z}' \
+      --map-points '${MAP_POINTS}'
   " &
 docker_pid=$!
 

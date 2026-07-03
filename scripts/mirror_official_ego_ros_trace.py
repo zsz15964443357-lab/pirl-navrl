@@ -207,7 +207,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--goal-z", type=float, default=1.0)
     parser.add_argument("--goal-delay", type=float, default=6.0)
     parser.add_argument("--map-topic", default="/map_generator/global_cloud")
-    parser.add_argument("--map-points", type=int, default=5000)
+    parser.add_argument("--map-points", type=int, default=20000)
     return parser.parse_args()
 
 

@@ -123,6 +123,10 @@ the official ROS topics into a host PyBullet GUI. Unlike the simplified bridge,
 it keeps the original `mockamap_node`, `pcl_render_node`, `traj_server`,
 `so3_control`, and `quadrotor_simulator_so3` loop.
 
+The viewer now renders the official global cloud as regular red voxel columns
+by default instead of tiny debug points, because raw PyBullet point rendering is
+too sparse and visually noisy for judging obstacle avoidance.
+
 Local headless validation:
 
 ```json
