@@ -44,6 +44,24 @@ roslaunch ego_planner run_in_sim.launch
 TASK_02 does not run or modify official planner internals. It documents the
 sidecar interface and runs a mock bridge when ROS is unavailable.
 
+## Local Docker Route On Ubuntu 22.04
+
+The current host is Ubuntu 22.04, while official EGO-Planner targets ROS1 Noetic
+on Ubuntu 20.04. Use the provided Docker wrapper:
+
+```bash
+bash scripts/run_ego_planner_noetic_docker.sh build
+bash scripts/run_ego_planner_noetic_docker.sh headless
+bash scripts/run_ego_planner_noetic_docker.sh rviz
+```
+
+Observed local status:
+
+- `catkin_make -DCMAKE_BUILD_TYPE=Release` passes in `osrf/ros:noetic-desktop-full`.
+- `roslaunch ego_planner run_in_sim.launch` starts the official sidecar nodes.
+- Publishing `/move_base_simple/goal` produces `/planning/pos_cmd`.
+- `roslaunch ego_planner simple_run.launch` starts RViz through X11.
+
 ## Local Smoke Test
 
 ```bash

@@ -4,7 +4,7 @@
 
 TASK_02 已完成 diagnostic 版本：EGO-Planner 官方仓库已本地准备，bridge I/O contract 已写清楚，`ego_like_static_v0` PyBullet 静态障碍场景和 mock EGO-like bridge smoke test 已跑通。
 
-本机未安装 ROS/catkin，检测不到 `roscore` 和 `catkin_make`，因此没有启动真实 EGO-Planner ROS sidecar。本轮结果只能作为 bridge spike 诊断，不是论文 baseline，不是 paper-candidate。
+主机 Ubuntu 22.04 未安装 ROS/catkin，检测不到 `roscore` 和 `catkin_make`。后续已用 `osrf/ros:noetic-desktop-full` Docker 容器完成官方 EGO-Planner `catkin_make`，并验证 `run_in_sim.launch`、`simple_run.launch` 能启动；发布 `/move_base_simple/goal` 后可从 `/planning/pos_cmd` 读到官方 EGO 输出。本轮结果仍然只作为 bridge spike 诊断，不是论文 baseline，不是 paper-candidate。
 
 ## 修改文件
 
@@ -16,6 +16,7 @@ TASK_02 已完成 diagnostic 版本：EGO-Planner 官方仓库已本地准备，
 - `pirl_navrl/scenarios/ego_like_static_v0.py`
 - `pirl_navrl/evaluation/diagnostic_logger.py`
 - `scripts/run_phase2_ego_like_smoke.py`
+- `scripts/run_ego_planner_noetic_docker.sh`
 - `tests/test_ego_bridge_contract.py`
 - `tests/test_ego_like_static_scenario.py`
 - `tests/test_task02_diagnostic_schema.py`
@@ -48,6 +49,7 @@ Python/local dependency observations:
 - `pybullet` import OK
 - `roscore`: missing
 - `catkin_make`: missing
+- Docker image for official sidecar: `osrf/ros:noetic-desktop-full`
 
 ## 运行命令
 
@@ -55,6 +57,9 @@ Python/local dependency observations:
 GIT_CLONE_FLAGS="--depth 1" bash scripts/setup_external_repos.sh --include-ego
 python3 scripts/run_phase2_ego_like_smoke.py
 python3 -m pytest -q
+bash scripts/run_ego_planner_noetic_docker.sh build
+bash scripts/run_ego_planner_noetic_docker.sh headless
+bash scripts/run_ego_planner_noetic_docker.sh rviz
 ```
 
 ## 测试结果
@@ -76,6 +81,14 @@ Smoke summary:
 }
 ```
 
+Official EGO sidecar Docker validation:
+
+- `catkin_make -DCMAKE_BUILD_TYPE=Release`: passed.
+- Built executables include `devel/lib/ego_planner/ego_planner_node` and `devel/lib/ego_planner/traj_server`.
+- `roslaunch ego_planner run_in_sim.launch`: starts ROS master and EGO nodes.
+- `/planning/pos_cmd`: produced after publishing `/move_base_simple/goal`.
+- `roslaunch ego_planner simple_run.launch`: starts RViz through X11.
+
 ## 生成产物
 
 - `results/task02_ego_like_smoke.jsonl`
@@ -84,17 +97,17 @@ Smoke summary:
 
 ## 当前限制
 
-- 真实 ROS sidecar 未启动，因为本机缺少 ROS/catkin。
-- 当前 command bridge 只输出 desired velocity 和 normalized action-like vector，还没有绑定到具体 gym-pybullet-drones action mode。
+- 主机原生 ROS sidecar 未安装；官方 EGO sidecar 目前通过 Docker Noetic 运行。
+- 当前 Python command bridge 只输出 desired velocity 和 normalized action-like vector，还没有绑定到具体 gym-pybullet-drones action mode。
 - Obstacle bridge 第一版只支持静态 cylinder/sphere -> synthetic pointcloud。
 - `ego_like_static_v0` 是工程诊断场景，不是 EGO 官方场景复现。
 - Mock planner 只用于闭环与日志验证，不代表 EGO-Planner 算法行为。
 
 ## 后续建议
 
-不建议立即把 official EGO sidecar 升级为正式 baseline。建议先在单独 ROS Noetic/catkin 环境中完成以下人工决策点：
+不建议立即把 official EGO sidecar 升级为正式 baseline。建议先完成以下人工决策点：
 
-1. 是否允许安装 ROS Noetic、catkin、`libarmadillo-dev` 并构建 `external/ego-planner`。
+1. 是否接受 Docker Noetic 作为 official sidecar 标准运行方式，或另建 Ubuntu 20.04/ROS Noetic 原生环境。
 2. 通过 `rqt_graph` 和 `rosnode info` 确认 EGO topic 名称，再把本轮 contract 映射到真实 ROS topic。
 3. 验证 EGO trajectory 输出频率和 PyBullet control step 是否匹配。
 4. 若 ROS 维护成本过高，回退到 EGO-style Python baseline：保留本轮 state/pointcloud/goal/command contract，替换 mock waypoint planner 为纯 Python 的局部轨迹优化或采样式避障 baseline。
