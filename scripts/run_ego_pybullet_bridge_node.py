@@ -123,7 +123,7 @@ class EgoPybulletBridgeNode:
             )
             clearance = min_clearance(self.position)
             self.min_clearance = min(self.min_clearance, clearance)
-            distance_to_goal = distance(self.position, GOAL)
+            distance_to_goal = distance(self.position, self.scene["goal"])
 
             self.publish_odom(now)
             self.publish_cloud(now)
@@ -218,14 +218,6 @@ class EgoPybulletBridgeNode:
         self.create_sphere(self.scene["start"], 0.13, [0.1, 0.45, 1.0, 1.0])
         self.create_sphere(self.scene["goal"], 0.16, [0.1, 0.85, 0.25, 1.0])
         self.drone_body = self.create_sphere(self.position, 0.14, [1.0, 0.82, 0.08, 1.0])
-        pybullet.addUserDebugText(
-            "official EGO-Planner -> PyBullet live",
-            [-5.7, 3.6, 2.6],
-            textColorRGB=[1, 1, 1],
-            textSize=1.2,
-            lifeTime=0,
-            physicsClientId=self.pybullet_client,
-        )
 
     def create_obstacle_body(self, obstacle: dict[str, Any]) -> None:
         pybullet = self.pybullet

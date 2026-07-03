@@ -125,6 +125,9 @@ results/ego_pybullet_live/live_trace.jsonl
 results/ego_pybullet_live/live_ros.log
 ```
 
+The PyBullet live viewer no longer renders debug text by default because
+PyBullet text can be blurry, misplaced, or font-dependent.
+
 Interface audit against EGO source:
 
 - `EGOReplanFSM::odometryCallback` consumes `/odom_world`; the launch remaps this to `/visual_slam/odom`.
@@ -141,6 +144,7 @@ Effect audit:
 - Latest headless run received commands but still had `min_clearance = -0.3122420983811688`.
 - ROS logs show repeated `A star path searching !!! 0.2 seconds time limit exceeded` in the more complex bridge scene.
 - Therefore the interface is connected, but the visual effect is not yet consistent with the original EGO simulator quality.
+- For original EGO visual quality and behavior, use `bash scripts/run_ego_planner_noetic_docker.sh rviz`; the PyBullet live viewer is only an interface-debug view until the SO3/tracking stack is replaced.
 
 ## 生成产物
 

@@ -120,6 +120,9 @@ mockamap-style box-obstacle scene. The GUI shows:
 - yellow sphere/line: tracked PyBullet diagnostic state
 - green line: official EGO `/planning/pos_cmd`
 
+No PyBullet debug text is shown by default because the GUI text rendering can
+be misaligned or visually noisy.
+
 Interface review status:
 
 - Odometry topic: `/visual_slam/odom` remapped to EGO `/odom_world` and `/grid_map/odom`.
@@ -132,3 +135,10 @@ Current limitation: this live bridge receives official EGO commands and shows
 clear lateral replanning behavior, but the simple PyBullet point-mass tracker
 does not yet reproduce the official EGO simulator's SO3-controlled behavior.
 Do not treat the current live view as a baseline-quality avoidance result.
+
+For the original repository's visual quality and avoidance behavior, use the
+official simulator/RViz route instead:
+
+```bash
+bash scripts/run_ego_planner_noetic_docker.sh rviz
+```

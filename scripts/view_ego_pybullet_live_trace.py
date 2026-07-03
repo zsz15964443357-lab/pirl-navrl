@@ -14,7 +14,7 @@ import pybullet_data
 
 def main() -> None:
     args = parse_args()
-    viewer = LiveTraceViewer(args.trace, direct=args.direct)
+    viewer = LiveTraceViewer(args.trace, direct=args.direct, show_text=args.show_text)
     try:
         viewer.run()
     finally:
@@ -26,14 +26,23 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--trace", type=Path, required=True)
     parser.add_argument("--direct", action="store_true")
     parser.add_argument("--idle-timeout", type=float, default=8.0)
+    parser.add_argument("--show-text", action="store_true")
     return parser.parse_args()
 
 
 class LiveTraceViewer:
-    def __init__(self, trace_path: Path, *, direct: bool = False, idle_timeout: float = 8.0) -> None:
+    def __init__(
+        self,
+        trace_path: Path,
+        *,
+        direct: bool = False,
+        idle_timeout: float = 8.0,
+        show_text: bool = False,
+    ) -> None:
         self.trace_path = trace_path
         self.direct = direct
         self.idle_timeout = idle_timeout
+        self.show_text = show_text
         self.client = None
         self.drone = None
         self.scene_ready = False
@@ -50,10 +59,14 @@ class LiveTraceViewer:
         p.setGravity(0, 0, -9.81, physicsClientId=self.client)
         if not self.direct:
             p.configureDebugVisualizer(p.COV_ENABLE_GUI, 1, physicsClientId=self.client)
+            p.configureDebugVisualizer(p.COV_ENABLE_SHADOWS, 1, physicsClientId=self.client)
+            p.configureDebugVisualizer(p.COV_ENABLE_RGB_BUFFER_PREVIEW, 0, physicsClientId=self.client)
+            p.configureDebugVisualizer(p.COV_ENABLE_DEPTH_BUFFER_PREVIEW, 0, physicsClientId=self.client)
+            p.configureDebugVisualizer(p.COV_ENABLE_SEGMENTATION_MARK_PREVIEW, 0, physicsClientId=self.client)
             p.resetDebugVisualizerCamera(
-                cameraDistance=8.7,
-                cameraYaw=4,
-                cameraPitch=-55,
+                cameraDistance=7.6,
+                cameraYaw=8,
+                cameraPitch=-48,
                 cameraTargetPosition=[0.0, 0.0, 1.0],
                 physicsClientId=self.client,
             )
@@ -110,7 +123,7 @@ class LiveTraceViewer:
             self.last_command_position = command_position
 
         self.line_counter += 1
-        if self.line_counter % 20 == 0:
+        if self.show_text and self.line_counter % 20 == 0:
             text = (
                 f"step={record['step']} dist={record['distance_to_goal']:.2f} "
                 f"clearance={record['min_clearance']:.2f} command={record['command_received']}"
@@ -128,25 +141,9 @@ class LiveTraceViewer:
         p.loadURDF("plane.urdf", physicsClientId=self.client)
         for obstacle in record["obstacles"]:
             self.create_obstacle(obstacle)
-        self.create_sphere(record["position"], 0.14, [0.1, 0.45, 1.0, 1.0])
-        self.create_sphere(record["goal"], 0.18, [0.1, 0.85, 0.25, 1.0])
-        self.drone = self.create_sphere(record["position"], 0.16, [1.0, 0.82, 0.08, 1.0])
-        p.addUserDebugText(
-            "Official EGO-Planner sidecar -> live PyBullet",
-            [-5.7, 3.65, 3.0],
-            textColorRGB=[1, 1, 1],
-            textSize=1.2,
-            lifeTime=0,
-            physicsClientId=self.client,
-        )
-        p.addUserDebugText(
-            "yellow: tracked PyBullet path | green: EGO /planning/pos_cmd",
-            [-5.7, 3.65, 2.85],
-            textColorRGB=[0.9, 0.95, 1.0],
-            textSize=0.9,
-            lifeTime=0,
-            physicsClientId=self.client,
-        )
+        self.create_sphere(record["position"], 0.13, [0.05, 0.35, 1.0, 1.0])
+        self.create_sphere(record["goal"], 0.2, [0.05, 0.85, 0.25, 1.0])
+        self.drone = self.create_sphere(record["position"], 0.17, [1.0, 0.78, 0.02, 1.0])
 
     def create_obstacle(self, obstacle: dict) -> None:
         if obstacle["kind"] == "box":
