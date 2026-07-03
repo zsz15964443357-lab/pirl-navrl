@@ -9,6 +9,16 @@ __pycache__/
 # Local external repositories
 external/gym-pybullet-drones/
 external/NavRL/
+external/ego-planner/
+
+# Local ROS / catkin workspaces and sidecar artifacts
+build/
+devel/
+install/
+log/
+*.bag
+*.db3
+*.pcd
 
 # Experiment outputs and large artifacts
 results/
