@@ -3,6 +3,37 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 EXTERNAL_DIR="${ROOT_DIR}/external"
+INCLUDE_EGO=0
+
+usage() {
+  cat <<'EOF'
+Usage: bash scripts/setup_external_repos.sh [--include-ego]
+
+Default clones only Phase 1 dependencies:
+  - gym-pybullet-drones
+  - NavRL reference checkout
+
+Use --include-ego for the Phase 2 EGO-Planner sidecar bridge spike.
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --include-ego)
+      INCLUDE_EGO=1
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "[error] Unknown argument: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
 
 clone_or_report() {
   local url="$1"
@@ -23,6 +54,7 @@ clone_or_report() {
     fi
     echo "[ok] ${name} already exists at ${dest}"
     git -C "${dest}" remote -v | sed 's/^/[remote] /'
+    git -C "${dest}" rev-parse --short HEAD | sed "s/^/[commit] ${name} /"
     return 0
   fi
 
@@ -40,6 +72,7 @@ clone_or_report() {
   else
     git clone "${url}" "${dest}"
   fi
+  git -C "${dest}" rev-parse --short HEAD | sed "s/^/[commit] ${name} /"
 }
 
 mkdir -p "${EXTERNAL_DIR}"
@@ -49,6 +82,11 @@ clone_or_report "https://github.com/learnsyslab/gym-pybullet-drones.git" \
 
 clone_or_report "https://github.com/Zhefan-Xu/NavRL.git" \
   "${EXTERNAL_DIR}/NavRL" "NavRL"
+
+if [[ "${INCLUDE_EGO}" == "1" ]]; then
+  clone_or_report "https://github.com/ZJU-FAST-Lab/ego-planner.git" \
+    "${EXTERNAL_DIR}/ego-planner" "ego-planner"
+fi
 
 cat <<'EOF'
 
@@ -60,4 +98,7 @@ Environment setup:
 
 If the network is slow, retry with:
   GIT_CLONE_FLAGS="--depth 1" bash scripts/setup_external_repos.sh
+
+For Phase 2 EGO-Planner sidecar preparation:
+  bash scripts/setup_external_repos.sh --include-ego
 EOF
