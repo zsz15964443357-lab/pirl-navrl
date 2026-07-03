@@ -14,6 +14,8 @@ PIRL-NavRL 是一个新的、干净的研究仓库，用于推进 **基于预测
 - 当前训练依赖：gym-pybullet-drones + Stable-Baselines3 + PyBullet
 - 第一阶段不引入：Isaac Sim、ROS1/ROS2、NavRL 训练栈
 
+NavRL 的参考边界见 [`docs/navrl_reference_scope.md`](docs/navrl_reference_scope.md)。
+
 ## 第一阶段目标
 
 第一阶段是环境配置和集成验证阶段，不是论文结果阶段。
