@@ -41,6 +41,8 @@ debug PPO training run.
   metrics.
 - The first PPO config is intentionally small and only verifies the training
   path.
+- Current PPO debug training is a single-env smoke. Formal training should add
+  VecEnv / VecNormalize / separate eval env before any baseline claim.
 
 ## Training Boundary
 
