@@ -1,0 +1,28 @@
+{
+  "task_id": "TASK_05",
+  "output_type": "diagnostic_training",
+  "description": "Small SB3 PPO debug training config. This is not a baseline or paper result.",
+  "curriculum_level": "level_0_no_obstacle_short",
+  "seed": 0,
+  "total_timesteps": 10000,
+  "max_speed": 1.0,
+  "output_root": "outputs/task05",
+  "run_id": null,
+  "randomize_each_reset": true,
+  "gui": false,
+  "ppo": {
+    "policy": "MlpPolicy",
+    "n_steps": 512,
+    "batch_size": 64,
+    "learning_rate": 0.0003,
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "ent_coef": 0.0,
+    "clip_range": 0.2,
+    "verbose": 1
+  },
+  "checkpoint": {
+    "save_freq": 2000,
+    "name_prefix": "task05_ppo_debug"
+  }
+}

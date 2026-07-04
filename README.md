@@ -219,6 +219,65 @@ JSONL 时再显式使用：
 python3 scripts/run_task04_gym_pybullet_drones_rollout.py --replay-gui
 ```
 
+## 第五阶段计划
+
+第五阶段是 **NavRL-Informed PPO Debug Training and Visualization**。
+
+第五阶段先阅读 NavRL 代码并做训练前置审查，然后才接入最小 SB3 PPO debug
+training。当前阶段不是 baseline，不做多 seed benchmark，不报告正式 success
+rate，不提交 checkpoint、TensorBoard、视频或 eval JSONL。
+
+第五阶段新增：
+
+- NavRL 参考审查：[`docs/navrl_code_review_for_task05.md`](docs/navrl_code_review_for_task05.md)
+- 训练前置审查：[`docs/task05_training_readiness_review.md`](docs/task05_training_readiness_review.md)
+- curriculum 配置：[`configs/task05_curriculum_levels.json`](configs/task05_curriculum_levels.json)
+- PPO debug 配置：[`configs/task05_ppo_debug_train.json`](configs/task05_ppo_debug_train.json)
+
+运行一次随机策略 eval，用来确认可视化和 JSONL 链路：
+
+```bash
+python3 scripts/eval_task05_ppo_debug.py \
+  --random-policy \
+  --curriculum-level level_0_no_obstacle_short \
+  --output outputs/task05/eval/random_rollout.jsonl
+```
+
+打开 GUI 直接看 TASK_05 策略 rollout：
+
+```bash
+python3 scripts/eval_task05_ppo_debug.py \
+  --random-policy \
+  --curriculum-level level_0_no_obstacle_short \
+  --gui
+```
+
+开始一次小规模 PPO debug training：
+
+```bash
+python3 scripts/train_task05_ppo_debug.py --config configs/task05_ppo_debug_train.json
+```
+
+训练后 eval checkpoint：
+
+```bash
+python3 scripts/eval_task05_ppo_debug.py \
+  --checkpoint outputs/task05/<run_id>/checkpoints/final_model.zip \
+  --output outputs/task05/<run_id>/eval/eval_rollout.jsonl
+```
+
+回放 eval JSONL：
+
+```bash
+python3 scripts/view_task03_rollout.py --trace outputs/task05/<run_id>/eval/eval_rollout.jsonl
+```
+
+画训练曲线：
+
+```bash
+python3 scripts/plot_task05_training_curves.py --run-dir outputs/task05/<run_id>
+```
+
 ## 项目结构原则
 
 仓库结构保持简单：

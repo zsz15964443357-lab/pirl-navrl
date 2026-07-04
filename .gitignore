@@ -21,6 +21,7 @@ log/
 *.pcd
 
 # Experiment outputs and large artifacts
+outputs/
 results/
 runs/
 tmp/

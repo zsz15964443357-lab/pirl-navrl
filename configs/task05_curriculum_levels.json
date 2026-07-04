@@ -1,0 +1,46 @@
+{
+  "task_id": "TASK_05",
+  "output_type": "diagnostic_config",
+  "arena_bounds": {
+    "x": [-5.0, 5.0],
+    "y": [-5.0, 5.0],
+    "z": [0.3, 3.0]
+  },
+  "defaults": {
+    "dt": 0.15,
+    "success_radius": 0.35,
+    "collision_radius": 0.22,
+    "start_goal_clearance": 0.8,
+    "obstacle_clearance": 0.35,
+    "start_goal_z": [0.9, 1.4]
+  },
+  "levels": [
+    {
+      "level_id": "level_0_no_obstacle_short",
+      "description": "Short goal-reaching debug level with no obstacles.",
+      "goal_distance": [2.0, 3.2],
+      "max_steps": 120,
+      "static_obstacle_count": 0,
+      "obstacle_radius": [0.0, 0.0],
+      "obstacle_height": [0.0, 0.0]
+    },
+    {
+      "level_id": "level_1_no_obstacle_long",
+      "description": "Longer goal-reaching debug level with no obstacles.",
+      "goal_distance": [4.0, 7.0],
+      "max_steps": 180,
+      "static_obstacle_count": 0,
+      "obstacle_radius": [0.0, 0.0],
+      "obstacle_height": [0.0, 0.0]
+    },
+    {
+      "level_id": "level_2_static_obstacle_easy",
+      "description": "Easy static obstacle level for diagnostic obstacle-aware training checks.",
+      "goal_distance": [4.0, 7.0],
+      "max_steps": 240,
+      "static_obstacle_count": 3,
+      "obstacle_radius": [0.18, 0.32],
+      "obstacle_height": [0.7, 1.4]
+    }
+  ]
+}
