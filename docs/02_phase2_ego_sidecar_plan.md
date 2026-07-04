@@ -7,7 +7,7 @@ TASK_02 不是论文结果阶段，也不是正式 baseline 对比阶段。
 当前只保留一条主路线：
 
 ```text
-official EGO-Planner run_in_sim.launch inside Docker Noetic
+official EGO planner/controller/simulator nodes inside Docker Noetic
         |
         | official ROS topics
         v
@@ -48,13 +48,11 @@ pirl_navrl/scenarios/ego_official_diagnostic_scenarios.py
 场景 ID：
 
 - `ego_static_obstacle_v0`
-  - 观察 official EGO 在 upstream static mockamap pointcloud 中的行为。
+  - 将固定柱状障碍点云注入 official EGO。
 - `ego_dynamic_obstacle_v0`
-  - 连续运动障碍物 config / trace hook。
-  - 当前未注入 official EGO，不声称动态避障成功。
+  - 将连续横向运动柱状障碍点云注入 official EGO。
 - `ego_sudden_motion_obstacle_v0`
-  - 突然运动障碍物 config / trace hook。
-  - 当前未注入 official EGO，不声称突然运动避障成功。
+  - 将“先静止、后横向运动”的柱状障碍点云注入 official EGO。
 
 运行：
 
@@ -75,10 +73,10 @@ TASK_02 生成 JSONL trace，不生成 baseline metrics。
   "task_id": "TASK_02",
   "output_type": "diagnostic",
   "route": "official_ego_docker_sidecar",
-  "source_launch": "ego_planner/run_in_sim.launch",
+  "source_launch": "pirl_navrl/bridges/ego_planner_bridge/ego_custom_map_sidecar.launch",
   "scenario_id": "ego_static_obstacle_v0",
   "obstacle_mode": "static",
-  "goal": [-8.0, 10.0, 1.0],
+  "goal": [6.0, 0.0, 1.0],
   "record_type": "state",
   "timestamp": 0.0,
   "elapsed": 0.0,
@@ -105,8 +103,8 @@ TASK_02 当前验收标准：
 
 1. 官方 EGO-Planner repo 已本地 clone，并记录 commit。
 2. Docker Noetic build/run 路线完整。
-3. official `run_in_sim.launch` 能启动并输出 `/planning/pos_cmd`。
+3. custom-map official sidecar 能启动并输出 `/planning/pos_cmd`。
 4. trace recorder 生成 TASK_02 official route JSONL。
 5. PyBullet mirror 能显示 official odom、command 和 map。
-6. 三个 diagnostic scenario config 存在；动态/突然运动限制写清楚。
+6. 三个 diagnostic scenario 均通过自定义 pointcloud 注入 official EGO。
 7. 不把当前输出作为论文 baseline。

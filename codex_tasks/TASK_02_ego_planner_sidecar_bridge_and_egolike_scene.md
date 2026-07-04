@@ -42,11 +42,12 @@ scripts/view_official_ego_pybullet_mirror.py
 - early interface experiment final distance / clearance 效果报告
 - 简化 point-mass tracker 避障效果判断
 
-## 动态障碍限制
+## 动态障碍注入
 
-`ego_dynamic_obstacle_v0` 和 `ego_sudden_motion_obstacle_v0` 当前只实现
-scenario config / trace hook。官方 `run_in_sim.launch` 尚未接入自定义动态
-pointcloud updater，因此不得声称已经验证 dynamic/sudden obstacle avoidance。
+`ego_dynamic_obstacle_v0` 和 `ego_sudden_motion_obstacle_v0` 已通过
+`/pirl_navrl/custom_scene_cloud` 注入 official EGO 的 `/grid_map/cloud`。
+它们用于诊断“我们自建 PyBullet-style 场景能否调用 EGO-Planner”，不是论文
+baseline。
 
 ## Trace 字段
 

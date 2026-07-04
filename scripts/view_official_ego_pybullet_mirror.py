@@ -44,6 +44,8 @@ class OfficialEgoMirrorViewer:
         self.last_record_time = time.monotonic()
         self.scene_ready = False
         self.state_count = 0
+        self.custom_map_publisher = False
+        self.obstacle_bodies: dict[str, int] = {}
 
     def run(self) -> None:
         self.trace_path.parent.mkdir(parents=True, exist_ok=True)
@@ -87,10 +89,10 @@ class OfficialEgoMirrorViewer:
             p.configureDebugVisualizer(p.COV_ENABLE_DEPTH_BUFFER_PREVIEW, 0, physicsClientId=self.client)
             p.configureDebugVisualizer(p.COV_ENABLE_SEGMENTATION_MARK_PREVIEW, 0, physicsClientId=self.client)
             p.resetDebugVisualizerCamera(
-                cameraDistance=24.0,
-                cameraYaw=-48,
-                cameraPitch=-58,
-                cameraTargetPosition=[-12.5, 4.0, 1.0],
+                cameraDistance=12.5,
+                cameraYaw=-35,
+                cameraPitch=-52,
+                cameraTargetPosition=[0.0, 0.0, 1.0],
                 physicsClientId=self.client,
             )
         p.loadURDF("plane.urdf", physicsClientId=self.client)
@@ -99,6 +101,7 @@ class OfficialEgoMirrorViewer:
     def update(self, record: dict) -> None:
         record_type = record.get("record_type", "state")
         if record_type == "metadata":
+            self.custom_map_publisher = bool(record.get("custom_map_publisher"))
             self.create_goal_marker(record.get("goal"))
             return
         if record_type == "map":
@@ -111,6 +114,8 @@ class OfficialEgoMirrorViewer:
         position = record.get("odom_position")
         if position is None:
             return
+        self.update_obstacles(record.get("obstacle_positions") or [])
+        self.scene_ready = True
         if self.drone is None:
             self.drone = self.create_sphere(position, 0.28, [1.0, 0.78, 0.02, 1.0])
         else:
@@ -155,6 +160,8 @@ class OfficialEgoMirrorViewer:
     def create_map(self, points: list[list[float]]) -> None:
         if not points:
             return
+        if self.custom_map_publisher and self.map_style == "voxels":
+            return
         if self.map_style in {"voxels", "both"}:
             self.create_voxel_map(points)
         if self.map_style in {"points", "both"}:
@@ -184,6 +191,55 @@ class OfficialEgoMirrorViewer:
                 physicsClientId=self.client,
             )
 
+    def update_obstacles(self, obstacles: list[dict]) -> None:
+        for obstacle in obstacles:
+            obstacle_id = str(obstacle.get("obstacle_id"))
+            position = obstacle.get("position")
+            if position is None:
+                continue
+            if obstacle_id not in self.obstacle_bodies:
+                self.obstacle_bodies[obstacle_id] = self.create_obstacle_body(obstacle)
+            p.resetBasePositionAndOrientation(
+                self.obstacle_bodies[obstacle_id],
+                position,
+                [0, 0, 0, 1],
+                physicsClientId=self.client,
+            )
+
+    def create_obstacle_body(self, obstacle: dict) -> int:
+        kind = obstacle.get("kind")
+        radius = float(obstacle.get("radius") or 0.5)
+        height = float(obstacle.get("height") or 1.0)
+        if kind == "sphere":
+            collision = p.createCollisionShape(p.GEOM_SPHERE, radius=radius, physicsClientId=self.client)
+            visual = p.createVisualShape(
+                p.GEOM_SPHERE,
+                radius=radius,
+                rgbaColor=[0.86, 0.12, 0.06, 0.9],
+                physicsClientId=self.client,
+            )
+        else:
+            collision = p.createCollisionShape(
+                p.GEOM_CYLINDER,
+                radius=radius,
+                height=height,
+                physicsClientId=self.client,
+            )
+            visual = p.createVisualShape(
+                p.GEOM_CYLINDER,
+                radius=radius,
+                length=height,
+                rgbaColor=[0.86, 0.12, 0.06, 0.9],
+                physicsClientId=self.client,
+            )
+        return p.createMultiBody(
+            baseMass=0.0,
+            baseCollisionShapeIndex=collision,
+            baseVisualShapeIndex=visual,
+            basePosition=obstacle.get("position", [0, 0, 1]),
+            physicsClientId=self.client,
+        )
+
     def create_goal_marker(self, goal: list[float] | None) -> None:
         if goal is None or self.goal_marker is not None:
             return
@@ -192,6 +248,8 @@ class OfficialEgoMirrorViewer:
     def create_axes(self) -> None:
         p.addUserDebugLine([-22, 0, 0.03], [2, 0, 0.03], [0.7, 0.7, 0.7], 1.0, physicsClientId=self.client)
         p.addUserDebugLine([-18, -12, 0.03], [-18, 14, 0.03], [0.7, 0.7, 0.7], 1.0, physicsClientId=self.client)
+        p.addUserDebugLine([-7, 0, 0.05], [7, 0, 0.05], [0.35, 0.35, 0.35], 1.2, physicsClientId=self.client)
+        p.addUserDebugLine([0, -4, 0.05], [0, 4, 0.05], [0.35, 0.35, 0.35], 1.2, physicsClientId=self.client)
 
     def create_sphere(self, position: list[float], radius: float, color: list[float]) -> int:
         collision = p.createCollisionShape(p.GEOM_SPHERE, radius=radius, physicsClientId=self.client)

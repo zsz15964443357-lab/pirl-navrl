@@ -33,6 +33,7 @@ class EgoOfficialDiagnosticScenario:
     seed: int
     start: Vector3
     goal: Vector3
+    map_size: Vector3
     duration: float
     obstacles: tuple[EgoDiagnosticObstacle, ...]
     notes: str
@@ -52,6 +53,7 @@ class EgoOfficialDiagnosticScenario:
             "seed": self.seed,
             "start": list(self.start),
             "goal": list(self.goal),
+            "map_size": list(self.map_size),
             "duration": self.duration,
             "obstacle_mode": self.obstacle_mode,
             "obstacles": [asdict(obstacle) for obstacle in self.obstacles],
@@ -60,89 +62,112 @@ class EgoOfficialDiagnosticScenario:
 
 
 def make_ego_static_obstacle_v0(seed: int = 127) -> EgoOfficialDiagnosticScenario:
-    """Static official-EGO diagnostic scene using the original mockamap loop."""
+    """Small custom static-obstacle scene injected as an EGO global cloud."""
 
     return EgoOfficialDiagnosticScenario(
         scenario_id="ego_static_obstacle_v0",
         seed=seed,
-        start=(-18.0, 0.0, 0.0),
-        goal=(-8.0, 10.0, 1.0),
-        duration=90.0,
+        start=(-6.0, 0.0, 1.0),
+        goal=(6.0, 0.0, 1.0),
+        map_size=(16.0, 10.0, 3.0),
+        duration=55.0,
         obstacles=(
             EgoDiagnosticObstacle(
-                obstacle_id="official_mockamap_static_cloud",
-                kind="pointcloud_cluster",
-                initial_position=(0.0, 0.0, 1.0),
-                radius=20.0,
-                height=3.0,
+                obstacle_id="static_center_post",
+                kind="cylinder",
+                initial_position=(-0.5, 0.0, 1.0),
+                radius=0.65,
+                height=2.0,
+                motion_type="static",
+            ),
+            EgoDiagnosticObstacle(
+                obstacle_id="static_offset_post",
+                kind="cylinder",
+                initial_position=(2.1, -0.75, 1.0),
+                radius=0.48,
+                height=2.0,
                 motion_type="static",
             ),
         ),
         notes=(
-            "Official run_in_sim.launch supplies the static obstacle field via "
-            "mockamap_node -> /map_generator/global_cloud and local sensing via "
-            "pcl_render_node. The configured obstacle represents that official "
-            "static pointcloud source, not a custom injected PyBullet obstacle."
+            "Custom TASK_02 scene. PIRL-NavRL publishes these PyBullet-style "
+            "obstacle primitives as /pirl_navrl/custom_scene_cloud, remapped to "
+            "official EGO /grid_map/cloud; planner, SO3 control, and simulator "
+            "remain upstream."
         ),
     )
 
 
 def make_ego_dynamic_obstacle_v0(seed: int = 127) -> EgoOfficialDiagnosticScenario:
-    """Dynamic-obstacle diagnostic config and future injection hook."""
+    """Small custom scene with one continuously moving crossing obstacle."""
 
     return EgoOfficialDiagnosticScenario(
         scenario_id="ego_dynamic_obstacle_v0",
         seed=seed,
-        start=(-18.0, 0.0, 0.0),
-        goal=(-8.0, 10.0, 1.0),
-        duration=90.0,
+        start=(-6.0, 0.0, 1.0),
+        goal=(6.0, 0.0, 1.0),
+        map_size=(16.0, 10.0, 3.0),
+        duration=60.0,
         obstacles=(
             EgoDiagnosticObstacle(
-                obstacle_id="future_linear_crossing_cluster",
-                kind="pointcloud_cluster",
-                initial_position=(-13.0, 4.0, 1.0),
-                radius=0.8,
+                obstacle_id="dynamic_crossing_post",
+                kind="cylinder",
+                initial_position=(-0.2, -2.0, 1.0),
+                radius=0.55,
                 height=2.0,
                 motion_type="linear",
-                velocity=(0.0, -0.45, 0.0),
+                velocity=(0.0, 0.22, 0.0),
                 start_time=0.0,
+            ),
+            EgoDiagnosticObstacle(
+                obstacle_id="dynamic_static_reference_post",
+                kind="cylinder",
+                initial_position=(2.3, 0.9, 1.0),
+                radius=0.45,
+                height=2.0,
+                motion_type="static",
             ),
         ),
         notes=(
-            "Current official run_in_sim.launch does not expose a custom dynamic "
-            "obstacle injection path. TASK_02 records this scenario as a trace "
-            "schema/config hook only; it must not be reported as verified dynamic "
-            "avoidance until a ROS pointcloud updater or map-generator override is added."
+            "Custom TASK_02 dynamic scene. PIRL-NavRL continuously republishes a "
+            "moving obstacle cloud to official EGO's /grid_map/cloud."
         ),
     )
 
 
 def make_ego_sudden_motion_obstacle_v0(seed: int = 127) -> EgoOfficialDiagnosticScenario:
-    """Sudden-motion obstacle diagnostic config and future injection hook."""
+    """Small custom scene where a crossing obstacle starts moving after delay."""
 
     return EgoOfficialDiagnosticScenario(
         scenario_id="ego_sudden_motion_obstacle_v0",
         seed=seed,
-        start=(-18.0, 0.0, 0.0),
-        goal=(-8.0, 10.0, 1.0),
-        duration=90.0,
+        start=(-6.0, 0.0, 1.0),
+        goal=(6.0, 0.0, 1.0),
+        map_size=(16.0, 10.0, 3.0),
+        duration=60.0,
         obstacles=(
             EgoDiagnosticObstacle(
-                obstacle_id="future_sudden_crossing_cluster",
-                kind="pointcloud_cluster",
-                initial_position=(-12.0, 5.5, 1.0),
-                radius=0.8,
+                obstacle_id="sudden_crossing_post",
+                kind="cylinder",
+                initial_position=(2.8, -1.7, 1.0),
+                radius=0.55,
                 height=2.0,
                 motion_type="sudden_linear",
-                velocity=(0.0, -0.7, 0.0),
-                start_time=12.0,
+                velocity=(0.0, 0.4, 0.0),
+                start_time=7.0,
+            ),
+            EgoDiagnosticObstacle(
+                obstacle_id="sudden_static_reference_post",
+                kind="cylinder",
+                initial_position=(2.4, -0.9, 1.0),
+                radius=0.45,
+                height=2.0,
+                motion_type="static",
             ),
         ),
         notes=(
-            "Current official run_in_sim.launch cannot directly inject a cluster "
-            "that starts stationary and then moves. This scenario is retained as "
-            "a diagnostic hook/TODO and must not be claimed as a successful sudden "
-            "motion avoidance validation yet."
+            "Custom TASK_02 sudden-motion scene. The main obstacle is stationary "
+            "at first and then moves laterally while official EGO keeps running."
         ),
     )
 

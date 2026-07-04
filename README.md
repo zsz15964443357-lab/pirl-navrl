@@ -59,7 +59,7 @@ NavRL 的参考边界见 [`docs/navrl_reference_scope.md`](docs/navrl_reference_
 4. 维护 static / dynamic / sudden-motion diagnostic scene config。
 5. 生成 official EGO diagnostic JSONL，不作为论文 baseline。
 
-第二阶段明确不做：正式 baseline 对比、论文级指标、多 seed 统计、动态障碍成功声明、NavRL baseline、NavRL 训练栈、EGO-Planner 论文结果复现。
+第二阶段明确不做：正式 baseline 对比、论文级指标、多 seed 统计、NavRL baseline、NavRL 训练栈、EGO-Planner 论文结果复现。
 
 第二阶段设计见 [`docs/02_phase2_ego_sidecar_plan.md`](docs/02_phase2_ego_sidecar_plan.md)。第二阶段任务见 [`codex_tasks/TASK_02_ego_planner_sidecar_bridge_and_egolike_scene.md`](codex_tasks/TASK_02_ego_planner_sidecar_bridge_and_egolike_scene.md)。
 

@@ -72,14 +72,13 @@ bash scripts/run_official_ego_diagnostic_scene.sh --scenario ego_dynamic_obstacl
 bash scripts/run_official_ego_diagnostic_scene.sh --scenario ego_sudden_motion_obstacle_v0
 ```
 
-This runs the official `ego_planner/run_in_sim.launch` unchanged in the Noetic
-Docker container. That launch owns the original map generator, `pcl_render_node`
-local sensing, EGO planner, `traj_server`, SO3 controller, and quadrotor
-simulator. The host PyBullet window is only a live mirror of the official ROS
-topics:
+This runs official EGO planner/controller/simulator nodes in the Noetic Docker
+container through `ego_custom_map_sidecar.launch`. PIRL-NavRL publishes the
+custom PyBullet-style obstacle scene as `/pirl_navrl/custom_scene_cloud`, which
+is remapped into EGO `/grid_map/cloud`. The host PyBullet window mirrors the
+same diagnostic scene and official ROS topics:
 
-- red voxel columns: official `/map_generator/global_cloud`, downsampled into
-  clear PyBullet obstacle blocks
+- red cylinders/spheres: custom TASK_02 obstacles, including dynamic motion
 - yellow sphere/line: official `/visual_slam/odom`
 - green line: official `/planning/pos_cmd`
 - green sphere: the published `/move_base_simple/goal`
@@ -95,11 +94,10 @@ Short local validation on this machine:
 ```json
 {
   "command_received": true,
-  "final_distance_to_goal": 0.2239981077623934,
-  "final_position": [-8.099465204895884, 9.799844148774891, 0.9851858001733191],
-  "goal": [-8.0, 10.0, 1.0],
+  "final_distance_to_goal": 0.020337071346071958,
+  "goal": [6.0, 0.0, 1.0],
   "map_received": true,
-  "records": 720
+  "max_abs_odom_y_static_smoke": 1.2102761799812451
 }
 ```
 
@@ -121,15 +119,14 @@ python3 scripts/view_official_ego_pybullet_mirror.py \
 Scenario definitions live in
 `pirl_navrl/scenarios/ego_official_diagnostic_scenarios.py`.
 
-- `ego_static_obstacle_v0`: observes official EGO behavior in the upstream
-  static `mockamap_node` pointcloud.
-- `ego_dynamic_obstacle_v0`: records a continuous-motion obstacle config and
-  future injection hook. Current official launch does not inject it.
-- `ego_sudden_motion_obstacle_v0`: records a sudden-motion obstacle config and
-  future injection hook. Current official launch does not inject it.
+- `ego_static_obstacle_v0`: injects fixed custom cylinders into official EGO.
+- `ego_dynamic_obstacle_v0`: injects a continuously crossing cylinder.
+- `ego_sudden_motion_obstacle_v0`: injects a cylinder that starts stationary
+  and then moves laterally.
 
-Do not claim dynamic or sudden-motion avoidance success until a ROS pointcloud
-updater or map-generator override is connected to official EGO.
+These scenarios demonstrate that our simple PyBullet-style scene can call
+official EGO as planner through ROS pointcloud/goal topics. They are still
+diagnostic scenes, not baseline experiments.
 
 ## Removed Simplified PyBullet Bridge
 

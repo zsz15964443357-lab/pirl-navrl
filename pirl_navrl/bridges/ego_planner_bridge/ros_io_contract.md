@@ -56,12 +56,10 @@ The first version samples only static `cylinder` and `sphere` primitives:
 ```
 
 Target ROS shape for future sidecar work: `sensor_msgs/PointCloud2`.
-Current official route uses `mockamap_node -> /map_generator/global_cloud` and
-`pcl_render_node` from the upstream launch.
-
-Dynamic and sudden-motion obstacle scenarios are currently config/trace hooks
-only. TASK_02 does not claim dynamic obstacle injection into official EGO until
-a ROS pointcloud updater or map-generator override is implemented.
+Current TASK_02 custom-scene route publishes PyBullet-style obstacle pointclouds
+to `/pirl_navrl/custom_scene_cloud`, remapped into official EGO `/grid_map/cloud`.
+This supports static, continuously moving, and sudden-motion diagnostic
+obstacles.
 
 ## Goal Bridge
 
@@ -96,6 +94,6 @@ effect evidence.
 Active route:
 
 - `route`: `official_ego_docker_sidecar`
-- `source_launch`: `ego_planner/run_in_sim.launch`
+- `source_launch`: `pirl_navrl/bridges/ego_planner_bridge/ego_custom_map_sidecar.launch`
 - trace schema only; not baseline metrics
 - PyBullet mirror is visualization/diagnostic only

@@ -15,13 +15,13 @@ Usage:
   bash scripts/run_official_ego_diagnostic_scene.sh --scenario ego_dynamic_obstacle_v0
   bash scripts/run_official_ego_diagnostic_scene.sh --scenario ego_sudden_motion_obstacle_v0
 
-This is the TASK_02 main route. It runs official EGO-Planner run_in_sim.launch
-inside Docker Noetic and opens a host PyBullet diagnostic mirror.
+This is the TASK_02 main route. It runs official EGO planner/controller/
+simulator nodes inside Docker Noetic with a PIRL-NavRL custom pointcloud scene
+and opens a host PyBullet diagnostic mirror.
 
 Notes:
-  - ego_static_obstacle_v0 observes the official static mockamap pointcloud.
-  - dynamic/sudden scenarios are trace-schema and future injection hooks only
-    until a ROS pointcloud updater or map-generator override is added.
+  - All three scenarios publish custom obstacle pointclouds to official EGO.
+  - PyBullet renders the same scene primitives for visual inspection.
 EOF
 }
 
@@ -72,9 +72,15 @@ items = {
     "SCENARIO_ID": metadata["scenario_id"],
     "OBSTACLE_MODE": metadata["obstacle_mode"],
     "DURATION": metadata["duration"],
+    "START_X": metadata["start"][0],
+    "START_Y": metadata["start"][1],
+    "START_Z": metadata["start"][2],
     "GOAL_X": metadata["goal"][0],
     "GOAL_Y": metadata["goal"][1],
     "GOAL_Z": metadata["goal"][2],
+    "MAP_SIZE_X": metadata["map_size"][0],
+    "MAP_SIZE_Y": metadata["map_size"][1],
+    "MAP_SIZE_Z": metadata["map_size"][2],
     "SCENARIO_NOTES": metadata["notes"],
     "SCENARIO_OBSTACLES_JSON": json.dumps(metadata["obstacles"], sort_keys=True),
 }
@@ -106,7 +112,14 @@ docker run --rm \
     mkdir -p '${CONTAINER_RESULTS_DIR}'
     source /opt/ros/noetic/setup.bash
     source /ego/devel/setup.bash
-    roslaunch ego_planner run_in_sim.launch > '${CONTAINER_ROS_LOG_PATH}' 2>&1 &
+    roslaunch /repo/pirl_navrl/bridges/ego_planner_bridge/ego_custom_map_sidecar.launch \
+      init_x:='${START_X}' \
+      init_y:='${START_Y}' \
+      init_z:='${START_Z}' \
+      map_size_x:='${MAP_SIZE_X}' \
+      map_size_y:='${MAP_SIZE_Y}' \
+      map_size_z:='${MAP_SIZE_Z}' \
+      > '${CONTAINER_ROS_LOG_PATH}' 2>&1 &
     launch_pid=\$!
     trap 'kill -INT \$launch_pid >/dev/null 2>&1 || true; wait \$launch_pid >/dev/null 2>&1 || true' EXIT
     sleep 8
@@ -116,11 +129,14 @@ docker run --rm \
       --goal-x '${GOAL_X}' \
       --goal-y '${GOAL_Y}' \
       --goal-z '${GOAL_Z}' \
+      --map-topic /pirl_navrl/custom_scene_cloud \
       --map-points '${MAP_POINTS}' \
       --scenario-id '${SCENARIO_ID}' \
       --obstacle-mode '${OBSTACLE_MODE}' \
       --scenario-notes '${SCENARIO_NOTES}' \
-      --scenario-obstacles-json '${SCENARIO_OBSTACLES_JSON}'
+      --scenario-obstacles-json '${SCENARIO_OBSTACLES_JSON}' \
+      --source-launch 'pirl_navrl/bridges/ego_planner_bridge/ego_custom_map_sidecar.launch' \
+      --publish-custom-map
   " &
 docker_pid=$!
 

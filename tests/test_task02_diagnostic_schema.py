@@ -9,7 +9,7 @@ def test_diagnostic_jsonl_preserves_task02_required_fields(tmp_path) -> None:
         "task_id": "TASK_02",
         "output_type": "diagnostic",
         "route": "official_ego_docker_sidecar",
-        "source_launch": "ego_planner/run_in_sim.launch",
+        "source_launch": "pirl_navrl/bridges/ego_planner_bridge/ego_custom_map_sidecar.launch",
         "scenario_id": "ego_static_obstacle_v0",
         "obstacle_mode": "static",
         "goal": [-8.0, 10.0, 1.0],
