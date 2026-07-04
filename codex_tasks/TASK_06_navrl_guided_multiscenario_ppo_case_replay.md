@@ -211,7 +211,96 @@ latent_risk
 
 训练必须支持 DummyVecEnv、VecNormalize、separate eval env、checkpoint save/load、normalization stats save/load、random-vs-trained evaluation、NaN/divergence detection。
 
-## 8. 俯视角 gym-pybullet GIF/video
+## 8. 训练诊断与防偷懒要求
+
+如果训练没有明显优于 random policy，不能只写“效果差”。必须按以下顺序诊断并记录：
+
+1. 验证 scene scale 和 reachability；
+2. 验证 heuristic sanity policy 是否能接近 goal 或保持 clearance；
+3. 验证 reward terms 是否 finite、符号是否合理、是否被单项主导；
+4. 验证 observation 是否 finite、是否归一化、min/max/mean/std 是否合理；
+5. 验证 desired velocity 是否被底层 drone 实际跟踪；
+6. 记录 action norm、clipped action fraction 和 velocity tracking error；
+7. 对照 NavRL 的对应设计；
+8. 做一个有针对性的修复，再重新 eval。
+
+必须新增或更新诊断产物，保存在 `outputs/task06/<run_id>/diagnostics/`：
+
+```text
+obs_stats.json
+reward_terms_stats.json
+action_stats.json
+control_tracking_error.json
+distance_curve.json
+reachability_report.json
+```
+
+这些产物不提交仓库，但 `TASK_06_TRAINING_EXECUTION_REPORT.md` 必须写明本地路径和摘要。
+
+## 9. Random / heuristic / trained 三方对比
+
+每个 scenario group 必须至少评估三类 policy：
+
+```text
+random policy
+heuristic sanity policy
+trained PPO policy
+```
+
+heuristic 不是 baseline，只是 sanity check。推荐实现：
+
+```text
+goal_tracking_policy
+static_clearance_heuristic_policy
+dynamic_reactive_heuristic_policy
+```
+
+如果 heuristic 也无法明显改善，必须优先怀疑 scene / control / reward / observation，而不是继续盲目增加 PPO steps。
+
+## 10. Fixed eval seeds 和禁止降低 eval 难度
+
+必须在配置中固定 eval seed list，例如：
+
+```text
+static_eval_seeds: [100, 101, 102, 103, 104]
+dynamic_eval_seeds: [200, 201, 202, 203, 204]
+latent_dynamic_eval_seeds: [300, 301, 302, 303, 304]
+```
+
+训练后 eval 必须使用声明的 scenario group config 和 seed list。禁止为了得到 success case 临时降低 eval 难度。如果没有 success，就输出 best_non_success_case。
+
+## 11. Curriculum gate
+
+每类场景内部必须有 easy -> medium 的 curriculum gate。不要直接用困难场景判断 PPO 失败。
+
+推荐 gate：
+
+```text
+mean_final_distance improves over random by configured threshold
+collision_count is not worse than random
+at least one success or meaningful best_non_success progress exists
+```
+
+未通过 gate 时，可以停留在 easy 并记录 blocked / needs_fix；不能跳到更难场景后直接宣称失败。
+
+## 12. Blocked report 质量要求
+
+Blocked report 是允许的，但必须具体。模糊 blocked 不合格。
+
+`docs/TASK_06_BLOCKED_TRAINING_REPORT.md` 必须包含：
+
+```text
+exact command
+timesteps reached
+failure mode or error summary
+diagnostic metrics
+NavRL references consulted
+fixes attempted
+next required change
+whether outputs are smoke-only or full-training partial
+```
+
+## 13. 俯视角 gym-pybullet GIF/video
 
 案例可视化优先生成 top-down gym-pybullet / PyBullet video 或 GIF。
 
@@ -224,7 +313,7 @@ scripts/render_task06_case_gif.py
 
 必须显示：start、goal、drone、trajectory、cylinder footprint、dynamic obstacle path、latent trigger state、step、distance_to_goal、min_clearance、success/collision/timeout、failure_type。产物保存在 `outputs/task06/...`，不得提交。
 
-## 9. Case selection
+## 14. Case selection
 
 每个 scenario group 在 full training 后必须选择：
 
@@ -255,7 +344,7 @@ latent_trigger_failure
 
 每个 failure summary 必须包含 suspected cause、NavRL reference consulted、next suggested fix。
 
-## 10. Required scripts / configs / reports
+## 15. Required scripts / configs / reports
 
 新增或更新：
 
@@ -287,7 +376,25 @@ docs/TASK_06_BLOCKED_TRAINING_REPORT.md
 docs/TASK_06_SMOKE_ONLY_REPORT.md
 ```
 
-## 11. Tests
+`docs/TASK_06_TRAINING_EXECUTION_REPORT.md` 必须包含固定结构：
+
+```text
+1. Environment and dependency status
+2. NavRL references used
+3. Scene scale calibration
+4. Training budget and actual timesteps
+5. Static results
+6. Dynamic results
+7. Latent dynamic results
+8. Random / heuristic / trained comparison
+9. Case replay paths
+10. Failure taxonomy
+11. What improved over TASK_05
+12. What remains blocked
+13. Next task recommendation
+```
+
+## 16. Tests
 
 新增 tests，覆盖：
 
@@ -302,6 +409,9 @@ scene scale validation and cylinder-only geometry
 top-down renderer schema and fallback behavior
 config output path safety
 NavRL adjustment document coverage
+heuristic sanity policy produces finite actions
+eval seed list is fixed and used
+blocked report template contains required fields
 ```
 
 场景比例测试必须覆盖：
@@ -317,7 +427,7 @@ moving obstacle speed violation fails
 top-down renderer schema includes scale data
 ```
 
-## 12. Completion criteria
+## 17. Completion criteria
 
 TASK_06 只有满足以下条件才算完成：
 
@@ -327,14 +437,14 @@ TASK_06 只有满足以下条件才算完成：
 4. scene-scale validation 在 PPO 前运行且默认训练场景通过；
 5. 三类场景均已 full training，或对未完成项写明 blocked；
 6. 任一 2k/4k/10k smoke run 不得标记为完成；
-7. 每类都有 random policy eval 和 trained checkpoint eval；
+7. 每类都有 random / heuristic / trained 三方 eval；
 8. 每类都有 success 或 best_non_success case；
 9. 每类都有 representative failure case；
 10. 每类 case 都有 top-down gym-pybullet GIF/video 或明确 fallback summary；
 11. 每类都有 random-vs-trained summary metrics；
-12. 效果差时必须写 failure taxonomy、NavRL reference 和下一步修正；
+12. 效果差时必须按诊断顺序写 failure taxonomy、NavRL reference、diagnostics path 和下一步修正；
 13. 不提交 outputs、checkpoints、GIF、videos、TensorBoard、wandb。
 
-## 13. Out of scope
+## 18. Out of scope
 
-TASK_06 不发布正式论文结论，不接 EGO baseline，不声称复现 NavRL，不使用 NavRL checkpoint 或结果。TASK_06 要完成论文级实现前置工作：长步数训练协议、多场景训练、场景比例校准、俯视角案例回放、失败分类和 NavRL-guided iteration。
+TASK_06 不发布正式论文结论，不接 EGO baseline，不声称复现 NavRL，不使用 NavRL checkpoint 或结果。TASK_06 要完成论文级实现前置工作：长步数训练协议、多场景训练、场景比例校准、俯视角案例回放、三方对比、失败分类和 NavRL-guided iteration。
