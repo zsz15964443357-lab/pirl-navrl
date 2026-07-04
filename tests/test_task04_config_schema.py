@@ -13,4 +13,5 @@ def test_task04_debug_config_schema() -> None:
     assert config["platform_id"] == "gym_pybullet_drones_velocity_adapter_debug"
     assert config["output_path"].endswith(".jsonl")
     assert config["max_speed"] > 0.0
-    assert config["visualize"] is False
+    assert config["live_gui"] is False
+    assert config["replay_gui"] is False

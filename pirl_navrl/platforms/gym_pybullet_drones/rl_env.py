@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 
 import gymnasium as gym
@@ -28,12 +29,34 @@ class Task04GymPybulletDronesRLEnv(gym.Env):
         seed: int = 0,
         max_speed: float = 1.0,
         gui: bool = False,
+        camera_mode: str = "manual",
+        camera_control: str = "orbit",
+        enable_mouse_picking: bool = False,
+        show_pybullet_ui: bool = False,
+        show_camera_preview: bool = False,
+        show_drone_marker: bool = False,
+        enable_onboard_camera: bool = False,
+        onboard_camera_width: int = 640,
+        onboard_camera_height: int = 480,
+        onboard_camera_period: int = 4,
+        clean_visuals: bool = False,
         reward_config: Task04RewardConfig | None = None,
     ) -> None:
         super().__init__()
         self.scenario = scenario or make_scenario(scenario_id, seed=seed)
         self.max_speed = max_speed
         self.gui = gui
+        self.camera_mode = camera_mode
+        self.camera_control = camera_control
+        self.enable_mouse_picking = enable_mouse_picking
+        self.show_pybullet_ui = show_pybullet_ui
+        self.show_camera_preview = show_camera_preview
+        self.show_drone_marker = show_drone_marker
+        self.enable_onboard_camera = enable_onboard_camera
+        self.onboard_camera_width = onboard_camera_width
+        self.onboard_camera_height = onboard_camera_height
+        self.onboard_camera_period = onboard_camera_period
+        self.clean_visuals = clean_visuals
         self.reward_config = reward_config or Task04RewardConfig()
         self.adapter: GymPybulletDronesSimpleAdapter | None = None
         self.previous_obs_dict: dict[str, Any] | None = None
@@ -47,11 +70,25 @@ class Task04GymPybulletDronesRLEnv(gym.Env):
     def reset(self, *, seed: int | None = None, options: dict | None = None):
         super().reset(seed=seed)
         if seed is not None:
-            self.scenario = make_scenario(self.scenario.scenario_id, seed=int(seed))
+            self.scenario = replace(self.scenario, seed=int(seed))
             self.observation_space = observation_space_for_scenario(self.scenario)
         del options
         self.close()
-        self.adapter = GymPybulletDronesSimpleAdapter(max_speed=self.max_speed, gui=self.gui)
+        self.adapter = GymPybulletDronesSimpleAdapter(
+            max_speed=self.max_speed,
+            gui=self.gui,
+            camera_mode=self.camera_mode,
+            camera_control=self.camera_control,
+            enable_mouse_picking=self.enable_mouse_picking,
+            show_pybullet_ui=self.show_pybullet_ui,
+            show_camera_preview=self.show_camera_preview,
+            show_drone_marker=self.show_drone_marker,
+            enable_onboard_camera=self.enable_onboard_camera,
+            onboard_camera_width=self.onboard_camera_width,
+            onboard_camera_height=self.onboard_camera_height,
+            onboard_camera_period=self.onboard_camera_period,
+            clean_visuals=self.clean_visuals,
+        )
         obs_dict = self.adapter.reset(self.scenario)
         self.previous_obs_dict = obs_dict
         observation = flatten_observation(obs_dict)

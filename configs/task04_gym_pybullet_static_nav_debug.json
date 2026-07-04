@@ -7,5 +7,6 @@
   "platform_id": "gym_pybullet_drones_velocity_adapter_debug",
   "output_path": "results/task04_gym_pybullet_static_nav_rollout.jsonl",
   "max_speed": 1.0,
-  "visualize": false
+  "live_gui": false,
+  "replay_gui": false
 }

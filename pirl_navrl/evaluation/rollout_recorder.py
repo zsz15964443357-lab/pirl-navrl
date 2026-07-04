@@ -1,4 +1,4 @@
-"""JSONL rollout recorder for TASK_03 diagnostic pipelines."""
+"""JSONL rollout recorder for diagnostic pipelines."""
 
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ class RolloutInitialStateRecord:
 
     def __post_init__(self) -> None:
         if self.output_type != "diagnostic":
-            raise ValueError("TASK_03 rollout initial states must use output_type='diagnostic'")
+            raise ValueError("diagnostic rollout initial states must use output_type='diagnostic'")
 
 
 @dataclass(frozen=True)
@@ -67,11 +67,14 @@ class RolloutStepRecord:
     physical_collision: bool | None = None
     custom_obstacles_physical: bool | None = None
     obstacle_body_ids: dict[str, int] | None = None
+    platform_terminated: bool | None = None
+    platform_truncated: bool | None = None
+    onboard_camera: dict[str, Any] | None = None
     record_type: str = "step"
 
     def __post_init__(self) -> None:
         if self.output_type != "diagnostic":
-            raise ValueError("TASK_03 rollout records must use output_type='diagnostic'")
+            raise ValueError("diagnostic rollout records must use output_type='diagnostic'")
 
 
 @dataclass(frozen=True)
@@ -92,17 +95,17 @@ class RolloutSummary:
 
     def __post_init__(self) -> None:
         if self.output_type != "diagnostic":
-            raise ValueError("TASK_03 rollout summaries must use output_type='diagnostic'")
+            raise ValueError("diagnostic rollout summaries must use output_type='diagnostic'")
 
 
 class RolloutJsonlWriter:
-    """Write TASK_03 metadata, step records, and summary records as JSONL."""
+    """Write diagnostic metadata, step records, and summary records as JSONL."""
 
     def __init__(self, path: str | Path, metadata: dict[str, Any]) -> None:
         self.path = Path(path)
-        self.metadata = {"task_id": "TASK_03", "output_type": "diagnostic", **metadata}
+        self.metadata = {"output_type": "diagnostic", **metadata}
         if self.metadata["output_type"] != "diagnostic":
-            raise ValueError("TASK_03 rollout output_type must be diagnostic")
+            raise ValueError("diagnostic rollout output_type must be diagnostic")
         self.records = 0
 
     def __enter__(self) -> "RolloutJsonlWriter":

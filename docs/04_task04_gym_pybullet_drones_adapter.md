@@ -16,8 +16,9 @@ TASK_03 已完成统一 `ScenarioConfig`、`PolicyLike`、diagnostic env、rollo
   内部转换为 `VelocityAviary` 的 `(1, 4)` velocity command。
 - observation adapter 输出固定 19 维 flattened observation，并保留 dict schema。
 - reward module 输出 finite reward 和 `reward_terms`。
-- `Task04GymPybulletDronesRLEnv` 满足 Gymnasium reset/step API，并通过 SB3
-  `check_env` smoke check。
+- `Task04GymPybulletDronesRLEnv` 满足 Gymnasium reset/step API，并提供
+  check script；当 `stable_baselines3` 可用时，该脚本可运行 `check_env`
+  smoke check。
 - 自定义障碍物已按 `ScenarioConfig` 注入 VelocityAviary 使用的 PyBullet
   client，作为静态 sphere/cylinder collision body；同时继续计算任务级
   clearance / safety collision metric。
@@ -308,6 +309,63 @@ python3 scripts/run_task04_gym_pybullet_drones_rollout.py
 ```
 
 依赖缺失时脚本必须明确报错，不会 fallback 到 TASK_03 diagnostic kinematic env。
+
+真实 PyBullet GUI：
+
+```bash
+python3 scripts/run_task04_gym_pybullet_drones_rollout.py --gui
+```
+
+`--gui` 只显示 live gym-pybullet-drones 物理仿真，不自动打开 trace replay
+viewer。GUI 默认约运行 60 秒，并在 rollout 结束后保持窗口打开，直到手动
+关闭窗口或按 Ctrl+C；如需自动关闭可使用 `--hold-seconds 5`。起点、终点和
+rollout 长度可以直接通过 CLI 覆盖：
+
+```bash
+python3 scripts/run_task04_gym_pybullet_drones_rollout.py \
+  --gui \
+  --start -4 0 1 \
+  --goal 3 2 1 \
+  --max-steps 240
+```
+
+live GUI 中蓝色小球是 start，绿色小球是 goal，红色 sphere/cylinder 是
+PyBullet collision body 障碍物，真实 Crazyflie 模型是无人机。默认 GUI
+目标使用 `(3, 2, 1)`，避免无避障 debug policy 直线撞上中间障碍后立刻结束。
+默认 TASK_04 障碍物尺寸已缩小，物理 collision body 和 visual body 保持一致，
+避免视觉比例相对 Crazyflie 过大。
+需要 replay JSONL 时显式加 `--replay-gui`。
+
+相机和面板选项：
+
+```bash
+python3 scripts/run_task04_gym_pybullet_drones_rollout.py --gui --camera-mode manual
+python3 scripts/run_task04_gym_pybullet_drones_rollout.py --gui --camera-mode follow
+python3 scripts/run_task04_gym_pybullet_drones_rollout.py --gui --camera-control pybullet --enable-mouse-picking
+python3 scripts/run_task04_gym_pybullet_drones_rollout.py --gui --camera-mode fixed
+python3 scripts/run_task04_gym_pybullet_drones_rollout.py --gui --camera-mode manual --show-pybullet-ui
+python3 scripts/run_task04_gym_pybullet_drones_rollout.py --gui --show-camera-preview --show-pybullet-ui
+python3 scripts/run_task04_gym_pybullet_drones_rollout.py --gui --onboard-camera
+python3 scripts/run_task04_gym_pybullet_drones_rollout.py --gui --show-drone-marker
+```
+
+`--camera-mode manual` 是默认模式，只在初始化时设置一次观察角度，之后不再
+重置视角。默认 `--camera-control orbit` 是查看优先模式：关闭 PyBullet
+mouse picking，左键/右键拖动旋转视角，中键上下拖动或滚轮缩放。`follow`
+模式会每步把 debug visualizer camera 重新对准无人机，因此不能同时用于
+自由鼠标拖拽。`--camera-control pybullet --enable-mouse-picking` 才使用
+PyBullet 原始 picking 行为；此时左键会优先拖动态物体，无人机可被拖动，
+静态障碍物不会被拖动。
+
+TASK_04 默认保留 PyBullet 官方棋盘地面，同时对 start / goal / obstacle
+visual 做了更清楚的颜色、阴影和高面数圆柱显示；碰撞体仍保持原 PyBullet
+几何体。
+
+`--show-camera-preview` 打开 PyBullet debug visualizer 的 RGB/depth/
+segmentation preview 面板。`--onboard-camera` 会额外采样一个朝向 goal 的
+轻量机载相机，并把 `onboard_camera` 统计写入 JSONL step record；GUI 中的
+青色线段表示该相机的 eye-to-target 方向。当前只做 diagnostic camera hook，
+不把图像接入训练 observation，也不保存图片或视频。
 
 ### 4.8 Visualization
 

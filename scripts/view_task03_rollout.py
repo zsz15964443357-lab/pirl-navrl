@@ -147,8 +147,9 @@ class Task03RolloutViewer:
 
     def draw_status(self, summary: dict[str, Any]) -> None:
         status = "collision" if summary.get("collision") else "success" if summary.get("success") else "timeout"
+        task_id = summary.get("task_id", "TASK")
         self.p.addUserDebugText(
-            f"TASK_03 diagnostic {status} steps={summary.get('steps')} dist={summary.get('final_distance_to_goal'):.2f}",
+            f"{task_id} {status} steps={summary.get('steps')} dist={summary.get('final_distance_to_goal'):.2f}",
             [-4.8, -4.8, 2.8],
             textColorRGB=[1.0, 1.0, 1.0],
             textSize=1.1,
