@@ -1,0 +1,10 @@
+{
+  "task_id": "TASK_03",
+  "output_type": "diagnostic",
+  "scenario_id": "task03_static_nav_v0",
+  "seed": 0,
+  "policy_id": "goal_seeking_velocity_debug",
+  "platform_id": "diagnostic_kinematic_env",
+  "output_path": "results/task03_static_nav_rollout.jsonl",
+  "visualize": false
+}

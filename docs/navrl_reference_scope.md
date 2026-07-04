@@ -30,6 +30,9 @@ NavRL 可以用于参考：
 - 参考 NavRL 的参数范围作为工程初值，但不要把这些初值包装成论文结论。
 - 在必要位置补充 attribution / license note。
 - 在 `docs/` 中记录哪些设计参考了 NavRL。
+- TASK_03 可以用 NavRL 的 runner、policy interface、rollout recorder、
+  visualization 和 deployment boundary 作为设计参考，但落地实现必须保持
+  PIRL-NavRL 自己的模块、命名、测试和许可证边界。
 
 禁止：
 

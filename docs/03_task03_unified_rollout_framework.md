@@ -19,6 +19,21 @@ ScenarioConfig
 
 本阶段仍然不是论文结果阶段，不训练正式模型，不生成 baseline matrix，不报告 success rate。
 
+当前实现状态：
+
+- `pirl_navrl/scenarios/core.py` 定义统一 `ScenarioConfig` 和
+  `task03_static_nav_v0`。
+- `pirl_navrl/interfaces/policy.py` 定义 `PolicyLike`。
+- `pirl_navrl/policies/simple_policies.py` 提供 debug policies。
+- `pirl_navrl/platforms/diagnostic_kinematic_env.py` 提供最小 diagnostic
+  kinematic loop。
+- `pirl_navrl/platforms/gym_pybullet_drones/simple_adapter.py` 仅保留显式
+  skeleton，不静默 fallback。
+- `pirl_navrl/evaluation/rollout_recorder.py` 写 TASK_03 diagnostic JSONL。
+- `scripts/run_task03_gym_pybullet_rollout.py` 和
+  `scripts/view_task03_rollout.py` 提供最小 rollout 与 PyBullet trace
+  visualization。
+
 ## 2. NavRL 与其他开源项目的参考方式
 
 NavRL 可以作为重要工程与算法实现参考源。允许仔细阅读 NavRL 代码，并在遵守许可证和归属边界的前提下，参考甚至复制小段实现思想或代码结构，再适配到 PIRL-NavRL 自己的模块中。
@@ -261,6 +276,12 @@ visualization: optional PyBullet GUI
 python3 scripts/run_task03_gym_pybullet_rollout.py
 python3 scripts/run_task03_gym_pybullet_rollout.py --gui
 python3 scripts/view_task03_rollout.py --trace results/task03_static_nav_rollout.jsonl
+```
+
+headless trace viewer 检查：
+
+```bash
+python3 scripts/view_task03_rollout.py --trace results/task03_static_nav_rollout.jsonl --direct
 ```
 
 输出 summary：

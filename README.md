@@ -82,6 +82,21 @@ NavRL 的参考边界见 [`docs/navrl_reference_scope.md`](docs/navrl_reference_
 
 第三阶段设计见 [`docs/03_task03_unified_rollout_framework.md`](docs/03_task03_unified_rollout_framework.md)。第三阶段任务见 [`codex_tasks/TASK_03_unified_scenario_policy_rollout_framework.md`](codex_tasks/TASK_03_unified_scenario_policy_rollout_framework.md)。
 
+运行第三阶段 diagnostic rollout：
+
+```bash
+python3 scripts/run_task03_gym_pybullet_rollout.py
+python3 scripts/view_task03_rollout.py --trace results/task03_static_nav_rollout.jsonl
+```
+
+打开 PyBullet GUI：
+
+```bash
+python3 scripts/run_task03_gym_pybullet_rollout.py --gui
+```
+
+这些命令只生成 diagnostic JSONL 和本地可视化，不产生论文指标或 success rate。
+
 ## 项目结构原则
 
 仓库结构保持简单：
