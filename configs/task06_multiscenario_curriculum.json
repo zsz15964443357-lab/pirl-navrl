@@ -1,0 +1,80 @@
+{
+  "task_id": "TASK_06",
+  "output_type": "diagnostic_config",
+  "arena_bounds": {
+    "x": [-5.0, 5.0],
+    "y": [-5.0, 5.0],
+    "z": [0.3, 3.0]
+  },
+  "defaults": {
+    "dt": 0.020833333333333332,
+    "success_radius": 0.35,
+    "collision_radius": 0.35,
+    "start_goal_z": [0.9, 1.4],
+    "start_goal_clearance": 0.8,
+    "obstacle_clearance": 0.35,
+    "max_dynamic_speed": 0.8
+  },
+  "levels": [
+    {
+      "level_id": "static_obstacle_easy",
+      "scenario_group": "static",
+      "goal_distance": [1.8, 2.8],
+      "max_steps": 1200,
+      "static_obstacle_count": 2,
+      "dynamic_obstacle_count": 0,
+      "obstacle_radius": [0.08, 0.14],
+      "obstacle_height": [2.0, 2.4],
+      "dynamic_speed": [0.0, 0.0],
+      "trigger_step": null
+    },
+    {
+      "level_id": "static_obstacle_medium",
+      "scenario_group": "static",
+      "goal_distance": [3.0, 5.0],
+      "max_steps": 850,
+      "static_obstacle_count": 4,
+      "dynamic_obstacle_count": 0,
+      "obstacle_radius": [0.2, 0.34],
+      "obstacle_height": [2.0, 2.6],
+      "dynamic_speed": [0.0, 0.0],
+      "trigger_step": null
+    },
+    {
+      "level_id": "dynamic_crossing_easy",
+      "scenario_group": "dynamic",
+      "goal_distance": [2.0, 3.2],
+      "max_steps": 1300,
+      "static_obstacle_count": 0,
+      "dynamic_obstacle_count": 1,
+      "obstacle_radius": [0.1, 0.16],
+      "obstacle_height": [2.0, 2.4],
+      "dynamic_speed": [0.18, 0.35],
+      "trigger_step": null
+    },
+    {
+      "level_id": "latent_dynamic_easy",
+      "scenario_group": "latent_dynamic",
+      "goal_distance": [2.0, 3.2],
+      "max_steps": 1300,
+      "static_obstacle_count": 0,
+      "dynamic_obstacle_count": 1,
+      "obstacle_radius": [0.1, 0.16],
+      "obstacle_height": [2.0, 2.4],
+      "dynamic_speed": [0.18, 0.4],
+      "trigger_step": 180
+    },
+    {
+      "level_id": "mixed_static_dynamic_easy",
+      "scenario_group": "mixed_static_dynamic",
+      "goal_distance": [3.0, 5.0],
+      "max_steps": 900,
+      "static_obstacle_count": 3,
+      "dynamic_obstacle_count": 1,
+      "obstacle_radius": [0.18, 0.32],
+      "obstacle_height": [2.0, 2.5],
+      "dynamic_speed": [0.25, 0.55],
+      "trigger_step": null
+    }
+  ]
+}

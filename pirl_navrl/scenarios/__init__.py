@@ -17,6 +17,13 @@ from pirl_navrl.scenarios.curriculum import (
     sample_static_obstacles,
     validate_scenario,
 )
+from pirl_navrl.scenarios.dynamic_curriculum import (
+    Task06CurriculumConfig,
+    Task06LevelConfig,
+    load_task06_curriculum_config,
+    make_task06_scenario,
+    task06_level_group,
+)
 from pirl_navrl.scenarios.ego_official_diagnostic_scenarios import (
     EgoDiagnosticObstacle,
     EgoOfficialDiagnosticScenario,
@@ -34,6 +41,8 @@ __all__ = [
     "ObstacleConfig",
     "ScenarioConfig",
     "ScenarioRandomizationConfig",
+    "Task06CurriculumConfig",
+    "Task06LevelConfig",
     "Vector3",
     "make_ego_dynamic_obstacle_v0",
     "make_ego_official_diagnostic_scenario",
@@ -43,7 +52,10 @@ __all__ = [
     "make_curriculum_scenario",
     "make_scenario",
     "make_task03_static_nav_v0",
+    "make_task06_scenario",
+    "load_task06_curriculum_config",
     "sample_start_goal",
     "sample_static_obstacles",
+    "task06_level_group",
     "validate_scenario",
 ]

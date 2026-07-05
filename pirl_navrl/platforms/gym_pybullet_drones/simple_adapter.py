@@ -31,6 +31,11 @@ class GymPybulletDronesSimpleAdapter:
         onboard_camera_height: int = 480,
         onboard_camera_period: int = 4,
         clean_visuals: bool = False,
+        near_goal_speed_radius: float = 0.0,
+        near_goal_min_speed_scale: float = 0.18,
+        altitude_hold: bool = True,
+        altitude_hold_gain: float = 1.2,
+        altitude_hold_max_speed: float = 0.55,
         pyb_freq: int = 240,
         ctrl_freq: int = 48,
     ) -> None:
@@ -47,6 +52,11 @@ class GymPybulletDronesSimpleAdapter:
         self.onboard_camera_height = onboard_camera_height
         self.onboard_camera_period = max(1, onboard_camera_period)
         self.clean_visuals = clean_visuals
+        self.near_goal_speed_radius = float(near_goal_speed_radius)
+        self.near_goal_min_speed_scale = float(near_goal_min_speed_scale)
+        self.altitude_hold = bool(altitude_hold)
+        self.altitude_hold_gain = float(altitude_hold_gain)
+        self.altitude_hold_max_speed = float(altitude_hold_max_speed)
         self.pyb_freq = pyb_freq
         self.ctrl_freq = ctrl_freq
         self.env = None
@@ -115,6 +125,8 @@ class GymPybulletDronesSimpleAdapter:
     def step(self, desired_velocity) -> tuple[dict[str, Any], float, bool, bool, dict[str, Any]]:
         if self.env is None or self.scenario is None:
             raise RuntimeError("reset(scenario) must be called before step()")
+        desired_velocity, near_goal_speed_scale = self._scale_velocity_near_goal(desired_velocity)
+        desired_velocity = self._apply_altitude_hold(desired_velocity)
         action_result = adapt_desired_velocity(
             desired_velocity,
             "normalized_velocity",
@@ -141,7 +153,8 @@ class GymPybulletDronesSimpleAdapter:
         safety_collision = bool(observation["min_clearance"] <= self.scenario.collision_radius)
         physical_collision = self._physical_obstacle_contact()
         collision = bool(safety_collision or physical_collision)
-        success = bool(observation["distance_to_goal"] <= self.scenario.success_radius)
+        reached_goal = bool(observation["distance_to_goal"] <= self.scenario.success_radius)
+        success = bool(reached_goal and not collision)
         timeout = bool(self.step_count >= self.scenario.max_steps and not collision and not success)
         terminated = bool(success or collision)
         truncated = bool(timeout)
@@ -158,10 +171,13 @@ class GymPybulletDronesSimpleAdapter:
             "collision": collision,
             "safety_collision": safety_collision,
             "physical_collision": physical_collision,
+            "reached_goal": reached_goal,
             "success": success,
             "timeout": timeout,
             "custom_obstacles_physical": True,
             "obstacle_body_ids": dict(self.obstacle_body_ids),
+            "near_goal_speed_scale": near_goal_speed_scale,
+            "altitude_hold": self.altitude_hold,
             "raw_desired_velocity": action_result.raw_desired_velocity,
             "clipped_desired_velocity": action_result.clipped_desired_velocity,
             "applied_action": action_result.applied_action,
@@ -173,6 +189,31 @@ class GymPybulletDronesSimpleAdapter:
             "platform_info": platform_info,
         }
         return observation, float(platform_reward), terminated, truncated, info
+
+    def _scale_velocity_near_goal(self, desired_velocity) -> tuple[np.ndarray, float]:
+        velocity = np.asarray(desired_velocity, dtype=np.float32).reshape(3)
+        if self.last_observation is None or self.near_goal_speed_radius <= 0.0:
+            return velocity, 1.0
+        distance = float(self.last_observation["distance_to_goal"])
+        if distance >= self.near_goal_speed_radius:
+            return velocity, 1.0
+        scale = float(
+            np.clip(
+                distance / max(self.near_goal_speed_radius, 1e-6),
+                self.near_goal_min_speed_scale,
+                1.0,
+            )
+        )
+        return (velocity * scale).astype(np.float32), scale
+
+    def _apply_altitude_hold(self, desired_velocity: np.ndarray) -> np.ndarray:
+        velocity = np.asarray(desired_velocity, dtype=np.float32).reshape(3).copy()
+        if not self.altitude_hold or self.last_observation is None:
+            return velocity
+        z_error = float(self.last_observation["relative_goal"][2])
+        max_vertical = max(0.0, self.altitude_hold_max_speed)
+        velocity[2] = float(np.clip(self.altitude_hold_gain * z_error, -max_vertical, max_vertical))
+        return velocity.astype(np.float32)
 
     def get_observation(self) -> dict[str, Any]:
         if self.last_observation is None:

@@ -1,0 +1,51 @@
+{
+  "task_id": "TASK_06",
+  "output_type": "diagnostic_training",
+  "seed": 0,
+  "min_timesteps": 300000,
+  "max_timesteps": 1000000,
+  "eval_freq": 50000,
+  "patience_evals": 4,
+  "target_success_rate_debug": 0.75,
+  "target_final_distance": 0.5,
+  "early_stop_on_plateau": true,
+  "total_timesteps": 500000,
+  "max_speed": 1.4,
+  "output_root": "outputs/task06",
+  "run_id": null,
+  "normalize_observation": false,
+  "normalize_reward": false,
+  "observation_style": "navrl_style",
+  "num_envs": 4,
+  "vec_env_type": "subproc",
+  "num_eval_episodes": 16,
+  "ppo": {
+    "policy": "MultiInputPolicy",
+    "device": "auto",
+    "feature_extractor": "navrl_style",
+    "n_steps": 512,
+    "batch_size": 128,
+    "learning_rate": 0.0005,
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "ent_coef": 0.001,
+    "clip_range": 0.1,
+    "n_epochs": 4,
+    "max_grad_norm": 5.0,
+    "verbose": 0,
+    "policy_kwargs": {
+      "log_std_init": -0.8
+    }
+  },
+  "scenario_group": "static",
+  "curriculum_level": "static_obstacle_easy",
+  "curriculum_levels": [
+    "static_obstacle_easy"
+  ],
+  "reward_profile": "static_avoidance_navrl_speed_safety",
+  "checkpoint": {
+    "save_freq": 50000,
+    "progress_log_freq": 25000,
+    "name_prefix": "task06_navrl_style_static_easy_speed_safety_ppo"
+  }
+}

@@ -30,6 +30,7 @@ def test_task04_rl_env_reset_step_contract() -> None:
         assert info["obstacle_body_ids"]
         assert "physical_collision" in info
         assert "safety_collision" in info
+        assert info["success"] == bool(info.get("reached_goal", False) and not info["collision"])
     finally:
         env.close()
 

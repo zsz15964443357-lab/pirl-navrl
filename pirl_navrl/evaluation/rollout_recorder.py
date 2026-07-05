@@ -70,6 +70,10 @@ class RolloutStepRecord:
     platform_terminated: bool | None = None
     platform_truncated: bool | None = None
     onboard_camera: dict[str, Any] | None = None
+    elapsed: float | None = None
+    dynamic_obstacle_positions: list[Any] | None = None
+    dynamic_obstacle_velocities: list[Any] | None = None
+    dynamic_relative_features: list[float] | tuple[float, ...] | None = None
     record_type: str = "step"
 
     def __post_init__(self) -> None:

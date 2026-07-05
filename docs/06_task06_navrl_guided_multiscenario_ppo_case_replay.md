@@ -86,6 +86,59 @@ patience_evals
 
 默认必须是 `--mode full`。只有用户显式传 `--mode smoke` 才允许短跑。
 
+### 4.1 当前本地实现状态
+
+当前实现已经完成 static、dynamic、latent_dynamic 三类 diagnostic PPO
+训练、random-vs-trained batch eval、case selection 和 GIF replay。早期
+100k / 350k 训练只看到接近目标的弱改善，没有成功案例；这些结果已作为失败
+诊断保留，不再代表当前最佳状态。
+
+根据 NavRL 重新补强的训练路线已经加入：
+
+- live gym-pybullet-drones 下使用 PyBullet `rayTestBatch` lidar，保持
+  NavRL-style `(1, 36, 4)` lidar tensor；
+- schema/offline 测试保留 scenario-geometry fallback；
+- `Task06NavRLStyleEnv` 使用 `state` / `lidar` / `direction` /
+  `dynamic_obstacle` dict observation；
+- `NavRLStyleFeatureExtractor` 使用 CNN/MLP fusion；
+- `num_envs` 支持多 PyBullet DIRECT client 的 `DummyVecEnv`；
+- `curriculum_levels` 支持 per-episode level rotation；
+- NavRL-style configs 当前设为 4 env、1M diagnostic timesteps、4M local
+  safety upper bound。
+
+最近一次定位不是单纯调 reward，而是先对照 NavRL 和失败轨迹定位问题：
+
+- dynamic / latent easy 场景去掉额外静态障碍，只保留一个 moving 或
+  sudden-moving obstacle，避免把混合场景误当作 easy 动态场景；
+- strict metrics 会按 `min_clearance <= collision_radius` 重算 collision，
+  避免视觉上发生碰撞但 summary 仍写 success；
+- latent 失败主要来自高度漂移，adapter 加入 altitude hold，让 PPO 重点处理
+  水平导航和避障；
+- static gate-easy 障碍从路径中心线偏移，dynamic/latent gate-easy 障碍减小
+  并放慢，用于先通过三类简单场景 gate，再逐步增加复杂度。
+
+当前最佳本地 diagnostic 观察：
+
+| Scenario group | Best local observation |
+| --- | --- |
+| static | gate-easy strict eval: 16/16 success, 0/16 collision, 0/16 timeout; mean final distance 0.348 m |
+| dynamic | gate-easy strict eval: 16/16 success, 0/16 collision, 0/16 timeout; mean final distance 0.348 m |
+| latent_dynamic | gate-easy strict eval: 16/16 success, 0/16 collision, 0/16 timeout; mean final distance 0.349 m |
+
+这些结果说明三类简单 gate 场景已有可观察的 trained behavior，并且通过了
+当前阶段的 strict diagnostic gate。它仍不是正式 baseline，也不是论文级
+success rate；下一步应冻结 gate 协议后逐步增加障碍物数量、运动速度和场景
+复杂度。
+
+当前 GIF 是从 gym-pybullet-drones eval JSONL 生成的 case replay，用于快速
+查看轨迹、障碍物、动态障碍物位置和失败类型；它不是 PyBullet GUI 录屏。
+当前统一审查目录：
+
+```text
+outputs/task06_visual_review/current_best/
+outputs/task06_visual_review/gate_easy_final/
+```
+
 ## 5. NavRL-guided 调整要求
 
 必须维护：
@@ -229,3 +282,5 @@ docs/TASK_06_BLOCKED_TRAINING_REPORT.md
 ```text
 docs/TASK_06_SMOKE_ONLY_REPORT.md
 ```
+
+TASK_07 可以进入 PIRL risk / intent module prototype，但前提是 TASK_06 已经提供静态、动态、潜在动态三类可回放案例。

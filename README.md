@@ -278,6 +278,130 @@ python3 scripts/view_task03_rollout.py --trace outputs/task05/<run_id>/eval/eval
 python3 scripts/plot_task05_training_curves.py --run-dir outputs/task05/<run_id>
 ```
 
+## 第六阶段计划
+
+第六阶段是 **NavRL-Guided Multi-Scenario PPO Training with Case Replay**。
+
+第六阶段在 TASK_05 的训练链路上增加 static / dynamic / latent_dynamic /
+mixed_static_dynamic 场景、reward profiles、VecEnv / VecNormalize hooks、随机
+策略与 checkpoint eval、case selection、rollout metrics 和 GIF/fallback
+replay。训练和 eval 跑在 `Task04GymPybulletDronesRLEnv` / gym-pybullet-drones
+物理后端上；GIF 是从 eval JSONL 生成的 case replay，不是 GUI 录屏。
+
+它仍然不是正式 baseline，不报告正式 success rate，不提交训练产物。早期
+100k / 350k debug 训练只观察到弱改善或失败案例；后续通过对照 NavRL 和
+失败轨迹定位问题，已经在三类场景得到初步可观察的 diagnostic trained
+behavior，但仍不能当论文结果使用。
+
+如果要更密切参考 NavRL，优先使用 `task06_navrl_style_*_ppo.json` 配置。
+这一路线使用结构化 `state` / `lidar` / `direction` / `dynamic_obstacle`
+观测、live PyBullet `rayTestBatch` lidar、SB3 `MultiInputPolicy` feature
+extractor、4-env `DummyVecEnv` 和更长的 multi-level curriculum，参数也按
+NavRL 的 PPO 尺度对齐。当前最佳本地诊断结果为：static 13/16 success
+但仍有 3/16 collision；dynamic 10/16 success、2/16 collision、4/16
+timeout；latent_dynamic 10/16 success、0/16 collision、6/16 timeout。
+这些数字只用于本地问题定位，不是正式 success rate。
+
+第六阶段文档：
+
+- 设计：[`docs/06_task06_navrl_guided_multiscenario_ppo_case_replay.md`](docs/06_task06_navrl_guided_multiscenario_ppo_case_replay.md)
+- NavRL-guided 调整记录：[`docs/navrl_guided_training_adjustments_task06.md`](docs/navrl_guided_training_adjustments_task06.md)
+- 完成报告：[`docs/TASK_06_COMPLETION_REPORT.md`](docs/TASK_06_COMPLETION_REPORT.md)
+
+运行 static PPO diagnostic training，默认 100k debug timesteps：
+
+```bash
+python3 scripts/train_task06_multiscenario_ppo.py --config configs/task06_static_ppo.json
+```
+
+运行更接近 NavRL 结构的 static PPO diagnostic training，默认 1M debug
+timesteps：
+
+```bash
+python3 scripts/train_task06_multiscenario_ppo.py --config configs/task06_navrl_style_static_ppo.json
+```
+
+运行 dynamic / latent_dynamic，默认也是 100k debug timesteps：
+
+```bash
+python3 scripts/train_task06_multiscenario_ppo.py --config configs/task06_dynamic_ppo.json
+python3 scripts/train_task06_multiscenario_ppo.py --config configs/task06_latent_dynamic_ppo.json
+```
+
+对应的 NavRL-style dynamic / latent_dynamic 配置：
+
+```bash
+python3 scripts/train_task06_multiscenario_ppo.py --config configs/task06_navrl_style_dynamic_ppo.json
+python3 scripts/train_task06_multiscenario_ppo.py --config configs/task06_navrl_style_latent_dynamic_ppo.json
+```
+
+NavRL-style 训练配置默认：
+
+```text
+num_envs: 4
+total_timesteps: 1000000
+max_timesteps: 4000000
+lidar: live PyBullet rayTestBatch when gym-pybullet-drones is active
+static curriculum_levels: static_obstacle_easy, static_obstacle_medium
+dynamic curriculum_levels: dynamic_crossing_easy, mixed_static_dynamic_easy
+latent curriculum_levels: latent_dynamic_easy
+```
+
+训练脚本会自动写入 random/trained eval summary、case JSONL 和 GIF/fallback
+到 `outputs/task06/<run_id>/eval/...`。如果只想单独跑随机策略 batch eval：
+
+```bash
+python3 scripts/eval_task06_multiscenario.py \
+  --curriculum-level dynamic_crossing_easy \
+  --random-policy \
+  --episodes 8 \
+  --render-gifs \
+  --output outputs/task06/eval/dynamic_random_batch
+```
+
+单独跑 checkpoint batch eval 时需要同时加载训练时保存的 VecNormalize：
+
+```bash
+python3 scripts/eval_task06_multiscenario.py \
+  --curriculum-level dynamic_crossing_easy \
+  --checkpoint outputs/task06/<run_id>/checkpoints/final_model.zip \
+  --vecnormalize outputs/task06/<run_id>/vecnormalize.pkl \
+  --episodes 8 \
+  --render-gifs \
+  --output outputs/task06/<run_id>/eval/dynamic_checkpoint_batch
+```
+
+NavRL-style 配置默认不使用 VecNormalize，单独 eval 时需要指定
+`--observation-style navrl_style`，并且不传 `--vecnormalize`：
+
+```bash
+python3 scripts/eval_task06_multiscenario.py \
+  --curriculum-level static_obstacle_easy \
+  --checkpoint outputs/task06/<run_id>/checkpoints/task06_navrl_style_static_ppo_debug_350000_steps.zip \
+  --episodes 8 \
+  --render-gifs \
+  --max-speed 2.0 \
+  --observation-style navrl_style \
+  --output outputs/task06/<run_id>/eval/navrl_style_checkpoint_batch
+```
+
+查看本地 GIF：
+
+```bash
+xdg-open outputs/task06_visual_review/current_best/static_success.gif
+xdg-open outputs/task06_visual_review/current_best/dynamic_success.gif
+xdg-open outputs/task06_visual_review/current_best/latent_success.gif
+xdg-open outputs/task06_visual_review/current_best/manifest.json
+```
+
+如果只想把某个 JSONL 重新渲染为 GIF 或 fallback summary：
+
+```bash
+python3 scripts/render_task06_case_gif.py \
+  --trace outputs/task06/<run_id>/eval/trained/episode_000.jsonl \
+  --output outputs/task06/<run_id>/eval/trained/episode_000.gif
+```
+
 ## 项目结构原则
 
 仓库结构保持简单：

@@ -1,0 +1,15 @@
+{
+  "task_id": "TASK_06",
+  "output_type": "diagnostic_case_selection_config",
+  "case_output_root": "outputs/task06",
+  "prefer_success": true,
+  "min_reasonable_clearance": 0.05,
+  "failure_types": [
+    "collision_failure",
+    "timeout_failure",
+    "near_miss_failure",
+    "control_instability_failure",
+    "dynamic_late_reaction_failure",
+    "latent_trigger_failure"
+  ]
+}
