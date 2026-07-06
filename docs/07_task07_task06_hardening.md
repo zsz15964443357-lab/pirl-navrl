@@ -12,6 +12,7 @@ TASK_07 的核心输出：
 cylinder-only default training geometry
 NavRL-style forest-like randomized scenes
 scene-scale validation before PPO
+parameter convergence and freeze policy
 full / smoke / blocked training protocol
 random / heuristic / trained sanity comparison
 PyBullet top-down case replay
@@ -226,7 +227,116 @@ random / heuristic rollout metrics are finite
 
 如果场景完全不可达、完全没有训练意义、或 latent activation 永远无关，不能作为默认训练样本。
 
-## 10. Training protocol hardening
+## 10. Parameter convergence and freeze policy
+
+TASK_07 必须把“可变项太多”的问题收敛下来。目标不是继续无限调参，而是参考 NavRL 建立一套默认训练栈，然后主要通过 curriculum 改变场景难度。
+
+必须新增：
+
+```text
+docs/task07_parameter_freeze_matrix.md
+configs/task07_default_ppo.json
+configs/task07_default_reward.json
+configs/task07_default_observation.json
+```
+
+`docs/task07_parameter_freeze_matrix.md` 至少包含以下列：
+
+```text
+Parameter
+Category: frozen / tune_once / curriculum
+Default value
+NavRL reference
+Allowed to change after Task7?
+Change condition
+```
+
+### 10.1 Frozen parameters
+
+以下内容应在 TASK_07 中尽快冻结，后续不得随意修改：
+
+```text
+observation schema
+action format
+policy architecture family
+collision radius
+safety margin
+success radius
+collision/success condition
+control frequency
+max_speed default
+top-down replay schema
+```
+
+主线 observation 应优先使用 NavRL-style dict observation：
+
+```text
+state
+lidar
+direction
+dynamic_obstacle
+```
+
+flat observation 只保留为 debug fallback。
+
+### 10.2 Tune-once parameters
+
+以下内容可在 TASK_07 中短期调一次，形成默认配置后冻结：
+
+```text
+PPO learning_rate
+PPO n_steps
+batch_size
+gamma
+gae_lambda
+clip_range
+ent_coef
+VecNormalize setting
+reward weights
+action penalty
+clearance penalty
+collision penalty
+progress weight
+```
+
+默认 PPO / policy stack 应密切参考 NavRL 的训练结构和参数尺度。可以使用 SB3 适配，但必须记录对应 NavRL 文件或 config。
+
+### 10.3 Curriculum parameters
+
+TASK_07 之后，后续训练主要允许变化 curriculum 参数：
+
+```text
+arena size
+goal distance
+static obstacle count
+dynamic obstacle count
+latent obstacle count
+obstacle density
+dynamic speed range
+latent trigger radius
+episode horizon
+```
+
+后续融合场景训练中，默认规则是：先固定 observation / reward / PPO / action / control，再调 curriculum。只有有明确 failure diagnosis 时，才允许解冻 PPO 或 reward。
+
+### 10.4 Freeze gate
+
+TASK_07 结束时，不要求完成正式大规模训练，但必须冻结默认训练栈。冻结 gate：
+
+```text
+static_forest_easy shows stable learning effect
+dynamic_forest_easy shows stable learning effect
+latent_dynamic_forest_easy shows stable learning effect
+heuristic policy clearly beats random
+trained policy is not clearly worse than heuristic and should beat random
+reward/obs/action diagnostics show no NaN, saturation, or scale anomaly
+2-3 seeds do not fully collapse under the same default stack
+top-down replay behavior is reasonable
+```
+
+冻结后，除非 blocked report 明确证明默认训练栈有问题，否则不得继续随意调 PPO / reward / observation / action。
+
+## 11. Training protocol hardening
 
 TASK_07 必须明确区分：
 
@@ -260,7 +370,7 @@ scripts/train_task07_hardened_multiscenario.py
 - full 未完成时必须写 blocked report；
 - 不能用 gate-easy 或 smoke 结果冒充完整 Task 7 completion。
 
-## 11. Random / heuristic / trained 三方对比
+## 12. Random / heuristic / trained 三方对比
 
 TASK_07 必须新增 heuristic sanity policies，用于检查场景和控制接口是否合理。
 
@@ -291,7 +401,7 @@ trained beats heuristic -> policy may be learning useful behavior
 
 heuristic 不是 formal baseline，不得作为论文 baseline 宣称。
 
-## 12. Top-down PyBullet renderer
+## 13. Top-down PyBullet renderer
 
 TASK_07 必须新增真正 PyBullet top-down renderer。Matplotlib JSONL replay 可以保留，但只能作为 fallback。
 
@@ -317,7 +427,7 @@ fallback summary JSON if rendering fails
 
 不要提交 GIF / MP4 / checkpoints / outputs。
 
-## 13. Diagnostics and reports
+## 14. Diagnostics and reports
 
 新增或更新：
 
@@ -338,6 +448,9 @@ docs/TASK_07_BLOCKED_REPORT.md
 - TASK_07 是否完成 cylinder-only；
 - scene-scale validation 是否在 PPO 前执行；
 - forest scene validation 是否证明场景可达且有训练意义；
+- parameter freeze matrix 是否完成；
+- 默认 PPO / reward / observation 是否冻结；
+- 哪些参数仍允许作为 curriculum 变化；
 - 每类场景 random / heuristic / trained 对比结果；
 - top-down PyBullet replay 是否生成；
 - 哪些内容仍 blocked。
@@ -354,7 +467,7 @@ reachability_report.json
 forest_scene_validation_report.json
 ```
 
-## 14. Tests
+## 15. Tests
 
 新增或更新 tests，至少覆盖：
 
@@ -369,10 +482,12 @@ latent random-delay activation
 heuristic policy finite action and progress check
 training mode full/smoke status schema
 top-down PyBullet renderer fallback schema
+parameter freeze matrix schema
+default PPO / reward / observation config exists
 report templates contain required fields
 ```
 
-## 15. 验收标准
+## 16. 验收标准
 
 TASK_07 完成时必须满足：
 
@@ -388,10 +503,12 @@ TASK_07 完成时必须满足：
 10. 每类都有 success 或 best_non_success case；
 11. 每类都有 representative failure case；
 12. 每类有 top-down PyBullet GIF/video 或明确 fallback summary；
-13. TASK_06 gate-easy 结果被明确标记为 diagnostic，不是 formal result；
-14. 不提交 outputs、checkpoints、GIF、MP4、TensorBoard、wandb。
+13. parameter freeze matrix 完成，并明确 frozen / tune_once / curriculum 三类；
+14. 默认 PPO / reward / observation 配置存在，并说明 NavRL 参考；
+15. TASK_06 gate-easy 结果被明确标记为 diagnostic，不是 formal result；
+16. 不提交 outputs、checkpoints、GIF、MP4、TensorBoard、wandb。
 
-## 16. 明确不做
+## 17. 明确不做
 
 TASK_07 不做：
 
