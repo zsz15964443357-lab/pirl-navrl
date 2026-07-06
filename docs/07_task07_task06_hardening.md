@@ -6,7 +6,7 @@ TASK_07 是对 TASK_06 的集中强化阶段。TASK_06 已经证明了 gym-pybul
 
 TASK_07 的目标是把 TASK_06 从 diagnostic prototype 强化为后续可用的训练基础设施。它不进入 PIRL intent/risk module，不接 EGO baseline，不做正式论文实验，不报告 formal success rate，不声称复现 NavRL，不使用 NavRL checkpoint 或结果。
 
-TASK_07 的核心输出：
+核心输出：
 
 ```text
 cylinder-only default training geometry
@@ -19,7 +19,28 @@ PyBullet top-down case replay
 strict report boundary
 ```
 
-## 2. 场景主线：NavRL-style forest，而不是复杂手工小场景
+## 2. 总原则：多参考 NavRL，减少自由变量
+
+TASK_07 不应继续开放所有变量反复调参。应参考 NavRL 的训练结构，收敛成：
+
+```text
+validated default training stack + curriculum difficulty changes
+```
+
+核心顺序：
+
+```text
+NavRL-inspired candidate defaults
+-> diagnostic validation
+-> validated defaults
+-> frozen defaults
+-> curriculum training
+-> evidence-based unfreeze if needed
+```
+
+冻结不是永久不可修改，而是默认稳定。只有记录验证证据后，参数才能标记为 `frozen`；只有通过明确失败诊断，才允许解冻。
+
+## 3. 场景主线：NavRL-style forest
 
 TASK_07 的场景生成应更接近 NavRL Isaac Sim 训练思路：
 
@@ -33,15 +54,7 @@ curriculum over obstacle count, density, and speed
 
 不要优先实现大量手工特殊 case，例如每个动态障碍都精确横穿 start-goal line，或者每个潜在动态障碍都精确设计触发剧情。主训练应使用简单、随机、可控、可扩展的森林式场景。
 
-核心原则：
-
-```text
-Use NavRL-style forest-like randomized training scenes rather than many hand-designed special cases.
-```
-
-## 3. 三类默认训练场景
-
-默认训练场景重构为：
+默认训练场景：
 
 ```text
 static_forest
@@ -55,11 +68,13 @@ latent_dynamic_forest
 mixed_forest
 ```
 
+`mixed_forest` 应作为 late curriculum 或 eval-first 场景，不应作为 TASK_07 的第一个训练目标。TASK_07 应先让 static_forest / dynamic_forest / latent_dynamic_forest 的 easy level 通过 freeze gate，再考虑 mixed_forest。
+
 所有默认训练障碍必须是 cylinder。sphere / mesh / mixed-shape 只能作为 future eval variant，不能作为默认训练场景。
 
-## 4. Static forest
+## 4. 三类 forest 场景
 
-Static forest 是随机圆柱森林：
+### 4.1 Static forest
 
 ```text
 random start / goal
@@ -80,13 +95,9 @@ static_forest_medium: more cylinders, moderate density
 static_forest_hard: more cylinders, narrower free space
 ```
 
-不要求手工设计 path-near / gate / cluster 类型，但场景不能完全无避障意义，也不能完全堵死。
+### 4.2 Dynamic forest
 
-## 5. Dynamic forest
-
-Dynamic forest 在 static forest 基础上加入 moving cylinders。
-
-默认动态规则：
+在 static forest 基础上加入 moving cylinders。默认动态规则：
 
 ```text
 random initial position
@@ -97,19 +108,9 @@ boundary behavior: bounce / wrap / respawn
 
 不要求每个 moving obstacle 都精确穿越 start-goal line。通过大量随机动态障碍和 curriculum 训练动态避障。
 
-推荐 levels：
+### 4.3 Latent dynamic forest
 
-```text
-dynamic_forest_easy: few moving cylinders, slow speed
-dynamic_forest_medium: more moving cylinders, medium speed
-dynamic_forest_hard: more moving cylinders, faster speed
-```
-
-## 6. Latent dynamic forest
-
-Latent dynamic forest 实现为 initially inactive dynamic cylinders。
-
-障碍物 reset 后先静止，满足 activation rule 后变成普通 moving cylinder。
+Latent dynamic forest 实现为 initially inactive dynamic cylinders。障碍物 reset 后先静止，满足 activation rule 后变成普通 moving cylinder。
 
 默认 activation：
 
@@ -137,15 +138,7 @@ reject samples where activation is completely irrelevant
 30% random-delay latent obstacles
 ```
 
-推荐 levels：
-
-```text
-latent_forest_easy: few latent cylinders, larger trigger radius, slow speed
-latent_forest_medium: more latent cylinders, smaller trigger radius, medium speed
-latent_forest_hard: more latent cylinders, shorter reaction window, faster speed
-```
-
-## 7. 代码与配置建议
+## 5. 代码与配置
 
 建议新增或更新：
 
@@ -171,15 +164,17 @@ boundary_behavior
 max_episode_steps_by_level
 ```
 
-## 8. Scene-scale validation
+## 6. Validation before PPO
 
-TASK_07 必须新增训练前场景尺度校验，例如：
+### 6.1 Scene-scale validation
+
+新增训练前场景尺度校验：
 
 ```text
 validate_task07_training_scene_scale(...)
 ```
 
-也可以兼容提供：
+也可兼容提供：
 
 ```text
 validate_task06_training_scene_scale(...)
@@ -200,11 +195,7 @@ cylinder height covers flight altitude
 max_steps reachability
 ```
 
-场景尺度应参考 NavRL，并记录在 `docs/navrl_guided_training_adjustments_task06.md` 或新增 `docs/navrl_guided_training_adjustments_task07.md`。
-
-## 9. Forest scene validation
-
-TASK_07 不需要强制每个障碍物都手工穿越 start-goal corridor，但必须验证随机森林场景不是无效样本。
+### 6.2 Forest scene validation
 
 新增：
 
@@ -227,20 +218,33 @@ random / heuristic rollout metrics are finite
 
 如果场景完全不可达、完全没有训练意义、或 latent activation 永远无关，不能作为默认训练样本。
 
-## 10. Parameter convergence, validation, and evidence-based freeze policy
+## 7. NavRL reference log
 
-TASK_07 必须把“可变项太多”的问题收敛下来，但不得盲目冻结参数。正确顺序是：
+必须新增或更新：
 
 ```text
-NavRL-inspired candidate defaults
--> diagnostic validation
--> validated defaults
--> frozen defaults
--> curriculum training
--> evidence-based unfreeze if needed
+docs/navrl_guided_training_adjustments_task07.md
 ```
 
-冻结不是永久不可修改，而是默认稳定。只有记录了验证证据后，参数才能标记为 `frozen`；只有通过明确失败诊断，才允许解冻。
+也可以继续扩展 `docs/navrl_guided_training_adjustments_task06.md`，但报告中必须明确 Task07 entries。
+
+表格至少包含：
+
+```text
+NavRL reference file/module/config
+Observed NavRL design
+PIRL-NavRL adaptation
+Affected parameter or module
+Category: system / training / curriculum
+Status: candidate / validated / frozen
+Reason
+Validation result
+Next action
+```
+
+不得只写“参考 NavRL”。必须写出具体 NavRL 文件、模块、脚本或配置来源。
+
+## 8. Parameter convergence, validation, and evidence-based freeze policy
 
 必须新增：
 
@@ -252,7 +256,7 @@ configs/task07_default_reward.json
 configs/task07_default_observation.json
 ```
 
-`docs/task07_parameter_freeze_matrix.md` 至少包含以下列：
+`docs/task07_parameter_freeze_matrix.md` 至少包含：
 
 ```text
 Parameter
@@ -266,7 +270,7 @@ Unfreeze condition
 Change log path
 ```
 
-### 10.1 Status semantics
+状态含义：
 
 ```text
 candidate: candidate default, may be revised during Task07 validation
@@ -275,23 +279,6 @@ frozen: passed freeze gate; default-stable unless evidence-based unfreeze is doc
 ```
 
 不得把未经验证的参数直接标记为 frozen。
-
-### 10.2 Freeze-after-validation parameters
-
-以下内容应在 TASK_07 中完成验证后冻结，后续不得随意修改：
-
-```text
-observation schema
-action format
-policy architecture family
-collision radius
-safety margin
-success radius
-collision/success condition
-control frequency
-max_speed default
-top-down replay schema
-```
 
 主线 observation 应优先使用 NavRL-style dict observation：
 
@@ -302,115 +289,44 @@ direction
 dynamic_obstacle
 ```
 
-flat observation 只保留为 debug fallback。
+flat observation 只能作为 debug fallback。
 
-### 10.3 Tune-once parameters
-
-以下内容可在 TASK_07 中短期调一次，形成默认配置后再经过验证进入 frozen 状态：
+冻结前必须记录验证证据：
 
 ```text
-PPO learning_rate
-PPO n_steps
-batch_size
-gamma
-gae_lambda
-clip_range
-ent_coef
-VecNormalize setting
-reward weights
-action penalty
-clearance penalty
-collision penalty
-progress weight
+observation: obs_stats finite, key features not constant, lidar/dynamic features usable
+reward: finite terms, no unexpected dominance, progress and clearance terms behave reasonably
+action/control: desired and actual motion consistent enough, clipping not persistently saturated
+PPO: no exploding loss, no immediate entropy collapse, 2-3 seeds do not fully collapse
 ```
 
-默认 PPO / policy stack 应密切参考 NavRL 的训练结构和参数尺度。可以使用 SB3 适配，但必须记录对应 NavRL 文件或 config。
+### 8.1 Freeze gate with minimum quantitative checks
 
-### 10.4 Curriculum parameters
-
-TASK_07 之后，后续训练主要允许变化 curriculum 参数：
-
-```text
-arena size
-goal distance
-static obstacle count
-dynamic obstacle count
-latent obstacle count
-obstacle density
-dynamic speed range
-latent trigger radius
-episode horizon
-```
-
-后续融合场景训练中，默认规则是：先固定 observation / reward / PPO / action / control，再调 curriculum。只有有明确 failure diagnosis 时，才允许解冻 PPO 或 reward。
-
-### 10.5 Validation evidence before freeze
-
-冻结前必须收集并记录验证证据。
-
-Observation validation 至少包括：
-
-```text
-obs_stats finite
-key features are not constant
-lidar / dynamic_obstacle features vary in relevant scenes
-nearest obstacle information is usable
-```
-
-Reward validation 至少包括：
-
-```text
-reward terms finite
-no single term dominates unexpectedly
-progress reward encourages goal approach
-clearance penalty does not make the policy only hide
-collision penalty does not make the policy freeze in place
-```
-
-Action/control validation 至少包括：
-
-```text
-desired_velocity and actual_velocity are consistent enough
-action clipping is not persistently saturated
-altitude behavior does not break horizontal avoidance
-action semantics are visible in top-down replay
-```
-
-PPO validation 至少包括：
-
-```text
-loss does not explode
-entropy does not immediately collapse
-value loss is not persistently abnormal
-2-3 seeds do not fully collapse
-forest_easy tasks show learning effect
-```
-
-### 10.6 Freeze gate
-
-TASK_07 结束时，不要求完成正式大规模训练，但必须冻结默认训练栈。冻结 gate：
+TASK_07 结束时，不要求正式大规模训练成功，但必须冻结默认训练栈。freeze gate 至少包含：
 
 ```text
 static_forest_easy shows stable learning effect
 dynamic_forest_easy shows stable learning effect
 latent_dynamic_forest_easy shows stable learning effect
-heuristic policy clearly beats random
-trained policy is not clearly worse than heuristic and should beat random
-reward/obs/action diagnostics show no NaN, saturation, or scale anomaly
-2-3 seeds do not fully collapse under the same default stack
+heuristic mean final_distance < random mean final_distance
+trained mean final_distance < random mean final_distance
+trained collision rate is not materially worse than random
+obs/reward/action stats are finite
+action clipping fraction is below a documented threshold
+2-3 seeds produce non-degenerate rollouts
 top-down replay behavior is reasonable
 ```
 
-### 10.7 Evidence-based unfreeze rule
+如果某项不满足，不能把相关参数标记为 frozen。应保留为 candidate 或 validated，并写 blocked / change log。
 
-冻结后，除非 blocked report 或 parameter change log 明确证明默认训练栈有问题，否则不得继续随意调 PPO / reward / observation / action。
+### 8.2 Evidence-based unfreeze rule
 
-允许解冻的例子：
+冻结后不是永远不能改，但必须通过明确失败诊断解冻。允许解冻的例子：
 
 ```text
 observation unfreeze: dynamic or latent features are unusable, constant, or repeatedly cause late reaction failures
 reward unfreeze: policy only rushes goal, only hides, freezes in place, or reward terms are badly scaled
-PPO unfreeze: multiple seeds show no learning effect and training diagnostics show PPO-specific instability
+PPO unfreeze: multiple seeds show no learning effect and PPO diagnostics show instability
 action/control unfreeze: desired and actual motion diverge or action clipping remains high
 ```
 
@@ -427,24 +343,29 @@ validation result
 whether the parameter returns to frozen status
 ```
 
-## 11. Training protocol hardening
+## 9. Required execution order
 
-TASK_07 必须明确区分：
-
-```text
-smoke
-full
-blocked
-```
-
-建议新增：
+Codex 必须按以下顺序执行，不得跳过 validation 直接训练或写 completion：
 
 ```text
-configs/task07_training_budget.json
-scripts/train_task07_hardened_multiscenario.py
+Stage 1: implement forest curriculum and cylinder-only defaults
+Stage 2: implement scene-scale validation and forest scene validation
+Stage 3: implement default PPO / reward / observation configs
+Stage 4: implement training protocol: full / smoke / blocked
+Stage 5: run smoke only for dependency and interface check
+Stage 6: run easy forest diagnostic validation for static/dynamic/latent
+Stage 7: collect obs/reward/action/control/PPO diagnostics
+Stage 8: fill parameter freeze matrix and NavRL reference log
+Stage 9: run random / heuristic / trained evaluation
+Stage 10: generate top-down PyBullet replay or fallback summary
+Stage 11: write completion report or blocked report
 ```
 
-或修复 TASK_06 训练脚本，使其支持：
+Smoke is dependency-only and never counts as completion.
+
+## 10. Training protocol hardening
+
+训练脚本必须支持：
 
 ```text
 --mode full
@@ -454,18 +375,25 @@ scripts/train_task07_hardened_multiscenario.py
 
 要求：
 
-- 默认 `--mode full`；
-- smoke 只能显式指定；
-- smoke checkpoint 不得用于 final case selection；
-- 每个 run 必须写 `training_completion_status.json`；
-- full 未完成时必须写 blocked report；
-- 不能用 gate-easy 或 smoke 结果冒充完整 Task 7 completion。
+```text
+default mode is full
+smoke must be explicit
+smoke checkpoint cannot be used for final case selection
+each run writes training_completion_status.json
+blocked full training writes a blocked report
+gate-easy or smoke cannot be reported as full completion
+```
 
-## 12. Random / heuristic / trained 三方对比
+建议新增：
 
-TASK_07 必须新增 heuristic sanity policies，用于检查场景和控制接口是否合理。
+```text
+configs/task07_training_budget.json
+scripts/train_task07_hardened_multiscenario.py
+```
 
-推荐 policies：
+## 11. Random / heuristic / trained comparison
+
+新增 heuristic sanity policies：
 
 ```text
 goal_tracking_policy
@@ -474,7 +402,7 @@ dynamic_reactive_heuristic_policy
 latent_reactive_heuristic_policy
 ```
 
-每类场景至少 eval：
+每个 scenario group 必须评估：
 
 ```text
 random policy
@@ -490,11 +418,11 @@ heuristic succeeds but PPO fails -> suspect PPO / reward / observation / trainin
 trained beats heuristic -> policy may be learning useful behavior
 ```
 
-heuristic 不是 formal baseline，不得作为论文 baseline 宣称。
+heuristic 不是 formal baseline，不得作为论文 baseline 报告。
 
-## 13. Top-down PyBullet renderer
+## 12. Top-down PyBullet renderer
 
-TASK_07 必须新增真正 PyBullet top-down renderer。Matplotlib JSONL replay 可以保留，但只能作为 fallback。
+必须新增真正 PyBullet top-down renderer。Matplotlib JSONL replay 可以保留，但只能作为 fallback。
 
 建议新增：
 
@@ -518,7 +446,7 @@ fallback summary JSON if rendering fails
 
 不要提交 GIF / MP4 / checkpoints / outputs。
 
-## 14. Diagnostics and reports
+## 13. Diagnostics and reports
 
 新增或更新：
 
@@ -533,19 +461,24 @@ docs/TASK_07_COMPLETION_REPORT.md
 docs/TASK_07_BLOCKED_REPORT.md
 ```
 
-报告必须明确：
+报告必须说明：
 
-- TASK_06 gate-easy result 是 diagnostic，不是 formal result；
-- TASK_07 是否完成 cylinder-only；
-- scene-scale validation 是否在 PPO 前执行；
-- forest scene validation 是否证明场景可达且有训练意义；
-- parameter freeze matrix 是否完成；
-- 默认 PPO / reward / observation 是否经过验证后冻结；
-- 哪些参数仍允许作为 curriculum 变化；
-- 是否存在解冻记录以及解冻证据；
-- 每类场景 random / heuristic / trained 对比结果；
-- top-down PyBullet replay 是否生成；
-- 哪些内容仍 blocked。
+```text
+TASK_06 gate-easy result is diagnostic only
+why scenes are NavRL-style forest-like scenes
+how static/dynamic/latent forest levels differ
+how latent activation works
+how forest validation rejects bad samples
+how curriculum changes obstacle count, density, or speed
+NavRL reference log status
+parameter freeze matrix status
+default PPO / reward / observation validation evidence
+which parameters remain curriculum variables
+unfreeze records if any
+random / heuristic / trained comparison
+top-down PyBullet replay status
+blocked items if any
+```
 
 本地 diagnostics 建议输出到 ignored `outputs/`：
 
@@ -560,7 +493,7 @@ forest_scene_validation_report.json
 parameter_validation_report.json
 ```
 
-## 15. Tests
+## 14. Tests
 
 新增或更新 tests，至少覆盖：
 
@@ -578,34 +511,35 @@ top-down PyBullet renderer fallback schema
 parameter freeze matrix schema
 parameter status candidate/validated/frozen schema
 parameter change log schema
+NavRL reference log schema
 default PPO / reward / observation config exists
 report templates contain required fields
 ```
 
-## 16. 验收标准
+## 15. 验收标准
 
 TASK_07 完成时必须满足：
 
 1. `pytest -q` 通过；
 2. static_forest / dynamic_forest / latent_dynamic_forest 默认训练障碍全部为 cylinder；
 3. scene-scale validation 在 PPO 前执行；
-4. 三类 forest 场景都通过 scene-scale validation；
-5. 三类 forest 场景都通过 forest scene validation；
-6. latent_dynamic_forest 默认支持 distance-to-drone trigger，并可选 random-delay trigger；
-7. train script 支持 full / smoke / blocked 状态；
-8. smoke 不会被标记为 completed；
-9. 每类场景都有 random / heuristic / trained eval summary；
-10. 每类都有 success 或 best_non_success case；
-11. 每类都有 representative failure case；
-12. 每类有 top-down PyBullet GIF/video 或明确 fallback summary；
-13. parameter freeze matrix 完成，并明确 system / training / curriculum 以及 candidate / validated / frozen 状态；
-14. 默认 PPO / reward / observation 配置存在，并说明 NavRL 参考和验证证据；
-15. frozen 参数不能没有 validation evidence；
+4. 三类 forest 场景都通过 scene-scale validation 和 forest scene validation；
+5. latent_dynamic_forest 支持 distance-to-drone trigger 和可选 random-delay trigger；
+6. train script 支持 full / smoke / blocked，且 smoke 不会被标记为 completed；
+7. 按 Required execution order 执行；
+8. NavRL reference log 完成，且含具体 NavRL 文件/模块/配置；
+9. parameter freeze matrix 完成，并明确 system / training / curriculum 以及 candidate / validated / frozen 状态；
+10. frozen 参数都有 validation evidence；
+11. 默认 PPO / reward / observation 配置存在，并说明 NavRL 参考和验证证据；
+12. 每类场景都有 random / heuristic / trained eval summary；
+13. 每类都有 success 或 best_non_success case；
+14. 每类都有 representative failure case；
+15. 每类有 top-down PyBullet GIF/video 或明确 fallback summary；
 16. 如果发生解冻，必须有 parameter change log 和 failure diagnosis；
 17. TASK_06 gate-easy 结果被明确标记为 diagnostic，不是 formal result；
 18. 不提交 outputs、checkpoints、GIF、MP4、TensorBoard、wandb。
 
-## 17. 明确不做
+## 16. 明确不做
 
 TASK_07 不做：
 
