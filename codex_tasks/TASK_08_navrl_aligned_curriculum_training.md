@@ -1,66 +1,83 @@
-# TASK_08：NavRL Code-Aligned Curriculum Training and Latent Semantic Dynamic Obstacles
+# TASK_08: NavRL Code-Aligned Curriculum Training and Latent Semantic Dynamic Obstacles
 
 ## 0. 任务定位
 
-TASK_07 没有得到足够好的训练效果。TASK_08 重新明确路线：以 NavRL 训练无人机项目为主参考对象，进行代码级对齐，在 gym-pybullet-drones / PyBullet 中做尺度适配，并加入本项目新增的 latent semantic dynamic obstacles。
+TASK_08 的目标是把当前训练路线从“自己继续盲调 PPO 避障系统”改成“以 `external/NavRL` 为主要参考对象，做 NavRL-style 训练闭环迁移”。
 
-TASK_08 不是从零重新设计 PPO 避障系统，而是迁移 NavRL-style navigation framework：
+本任务不追求论文结果，不声称复现 NavRL，不提交 checkpoints / outputs / videos / TensorBoard / wandb。
+
+TASK_08 主线：
 
 ```text
-NavRL code-level source study
-+ NavRL-style observation
-+ NavRL-style velocity action
-+ NavRL-style reward structure
-+ NavRL-style PPO / policy setup
-+ NavRL-style forest curriculum
-+ PyBullet-compatible scale adaptation
-+ latent semantic dynamic obstacle extension
+read external/NavRL source
+-> write source index and alignment table
+-> define observation / lidar / action / reward / curriculum contracts
+-> implement NavRL-style observation + velocity action + safe-navigation reward
+-> train from easy forest curriculum
+-> evaluate random / heuristic / trained
+-> freeze, promote, or write blocked report
 ```
 
-TASK_08 不做 formal paper result，不声称复现 NavRL，不提交 checkpoints/outputs/videos。
-
-## 1. 必须阅读的上下文
+本项目已经允许：
 
 ```text
+- external/ 下已有 NavRL 本地 clone
+- 允许结构参考 NavRL
+- 允许在遵守 license / attribution 的前提下迁移小段代码片段
+```
+
+明确差异：
+
+```text
+simulation backend: NavRL backend -> gym-pybullet-drones / PyBullet
+scene scale: NavRL forest scale -> smaller PyBullet-compatible forest
+research extension: latent semantic dynamic obstacles
+training budget: large training -> smaller staged curriculum training
+```
+
+## 1. 不做什么
+
+TASK_08 不做：
+
+```text
+formal paper success-rate table
+formal NavRL benchmark reproduction
+full sim-to-real experiment
+real RGB-D policy input
+CNN vision encoder
+EGO baseline
+PIRL final risk module
+formal safety shield
+unbounded reward/PPO tuning
+```
+
+Camera 只能用于 diagnostic / visualization，不进入 policy input。
+
+Safety shield 只保留 identity interface：
+
+```text
+policy_output -> identity_safety_filter -> action_adapter
+```
+
+正式 safety shield 放到 TASK_09。
+
+## 2. 必须先读的上下文
+
+实现核心训练代码前，先读：
+
+```text
+external/NavRL/
 docs/08_task08_navrl_aligned_curriculum_training.md
-docs/07_task07_task06_hardening.md
-docs/TASK_07_COMPLETION_REPORT.md 或 docs/TASK_07_BLOCKED_REPORT.md（如果存在）
-docs/navrl_guided_training_adjustments_task06.md
-codex_tasks/TASK_07_task06_hardening_training_protocol.md
+codex_tasks/TASK_08_navrl_aligned_curriculum_training.md
+docs/07_task07_task06_hardening.md, if useful
+docs/navrl_guided_training_adjustments_task06.md, if useful
 ```
 
-如果 TASK_07 report 不存在，必须从当前代码和 Task07 文档中提取 blocked reason，并在 Task08 report 中说明。
+Task07 / Stage7 资料不作为 TASK_08 启动阻塞。如果 Task07 completion / blocked report 不完整，可以在 TASK_08 report 中简单说明“历史失败信息不足”，不要因此停工。
 
-## 2. 核心原则
+## 3. Stage 0: NavRL source study
 
-除以下差异外，能严格参考 NavRL 训练项目代码的地方应尽量严格参考：
-
-```text
-simulation backend: Isaac Sim -> gym-pybullet-drones / PyBullet
-scene scale: large NavRL forest -> smaller PyBullet-compatible forest
-new extension: latent semantic dynamic obstacles
-training budget: large parallel training -> smaller curriculum training
-```
-
-重点参考 NavRL 代码，而不是只参考论文：
-
-```text
-state / observation representation structure
-static obstacle raycast / lidar-like representation
-dynamic obstacle state representation
-velocity-style action semantics
-safe navigation reward term structure and relative role
-PPO / policy network setup
-random forest curriculum
-training script organization and logging pattern
-safety shield interface direction for later stages
-```
-
-实现前必须先读 NavRL 代码、配置、环境、reward、observation、policy、curriculum 和 training scripts。若直接复用小段实现或配置，必须记录来源、差异、license / attribution。
-
-## 3. Stage 0：先读 NavRL 代码，再实现
-
-写任何核心训练代码前，先新增并完成：
+写核心代码前，必须新增并完成：
 
 ```text
 docs/task08_navrl_source_index.md
@@ -68,22 +85,27 @@ docs/task08_navrl_alignment_table.md
 docs/TASK_08_FROM_TASK_07_FAILURE_ANALYSIS.md
 ```
 
-`docs/task08_navrl_source_index.md` 必须列出：
+### 3.1 `docs/task08_navrl_source_index.md`
+
+必须列出实际读过的 NavRL 文件：
 
 ```text
-NavRL repository URL or local reference path
+NavRL repository URL or local path
 commit / branch / version if available
 file path
 function / class / config name
 what it controls
 whether we strictly follow it
 whether we adapt it
+whether we migrate a code snippet
 license / attribution note
 ```
 
-如果某个模块找不到 NavRL 源码，写明 `not found`，不要凭论文或记忆假装代码对齐。
+如果某个模块找不到对应 NavRL 源码，写 `not found`，不要凭记忆或论文假装代码对齐。
 
-`docs/task08_navrl_alignment_table.md` 必须覆盖：
+### 3.2 `docs/task08_navrl_alignment_table.md`
+
+必须覆盖：
 
 ```text
 observation/state representation
@@ -93,7 +115,7 @@ action representation
 reward structure
 PPO / policy setup
 forest curriculum
-training script and budget
+training script and logging pattern
 safety shield placeholder
 latent semantic dynamic obstacle extension
 ```
@@ -104,19 +126,17 @@ latent semantic dynamic obstacle extension
 Module
 NavRL code file / config
 NavRL design from code
-Strictly referenced? yes / adapted / no
+Reference level: strict / adapted / no / extension
 PIRL-NavRL implementation
 Difference from NavRL
 Reason for difference
 Validation evidence
-Status: candidate / validated / frozen
+Status: candidate / validated / frozen / blocked
 ```
-
-`docs/TASK_08_FROM_TASK_07_FAILURE_ANALYSIS.md` 必须说明 Task07 tried what, failed how, suspected causes, Task08 changes, and what not to repeat.
 
 ## 4. 启动前 design contracts
 
-进入 full training 前必须完成：
+进入 full training 前，必须完成：
 
 ```text
 configs/task08_navrl_style_observation.json
@@ -128,17 +148,11 @@ configs/task08_training_budget.json
 docs/task08_promotion_block_criteria.md
 ```
 
-这些 contracts 不完成，只能 smoke，不能 full training。
+这些 contracts 没完成时，只允许 smoke / interface check，不允许 full training。
 
-## 5. Observation：实现 NavRL-style dict observation
+## 5. Observation contract
 
-新增：
-
-```text
-pirl_navrl/observation/navrl_style_observation.py
-```
-
-主线 schema：
+Observation 结构参考 NavRL。TASK_08 主线使用 NavRL-style dict schema：
 
 ```text
 {
@@ -150,68 +164,137 @@ pirl_navrl/observation/navrl_style_observation.py
 }
 ```
 
-`docs/task08_observation_contract.md` 必须写明每个 field 的 shape、unit、coordinate frame、normalization、clip range、padding、mask、flatten order、NavRL source reference。
-
-第一版建议：
+第一版实现策略：
 
 ```text
-NavRL-style dict schema for documentation and validation
-flattened vector for SB3 PPO MlpPolicy implementation
+dict observation: documentation, validation, diagnostics
+flattened observation: SB3 MlpPolicy training input
 ```
 
-若使用 MultiInputPolicy 或 custom feature extractor，必须写清 NavRL 代码依据和每个分支 shape。
+不优先上 MultiInputPolicy / custom feature extractor。只有在 NavRL 源码依据清楚、shape 也写清楚时才作为可选升级。
 
-### 5.1 lidar / raycast
-
-第一版建议：
+`docs/task08_observation_contract.md` 必须写清：
 
 ```text
-2D horizontal raycast
-360-degree FOV unless NavRL code shows otherwise and can be adapted
-static cylinders included in lidar
-dynamic / latent obstacles represented in dynamic_obstacle / latent_obstacle channels
-ray distance normalized to [0, 1]
-missing hit = 1.0
+field name
+shape
+unit
+coordinate frame
+normalization
+clip range
+padding rule
+mask rule
+flatten order
+NavRL source reference
 ```
 
-### 5.2 dynamic_obstacle
-
-至少包含：
+建议初版字段：
 
 ```text
-relative position
-relative velocity
-distance
-radius or safety size
-valid mask
+state:
+  - drone linear velocity, normalized
+  - altitude or z error, if used
+  - previous action, if NavRL uses it or tracking diagnostics need it
+  - other basic motion state only if justified by NavRL or control needs
+
+direction:
+  - normalized direction to goal
+  - clipped distance to goal
+
+lidar:
+  - static obstacle ray distances
+  - normalized to [0, 1]
+  - missing hit = 1.0
+
+dynamic_obstacle:
+  per obstacle:
+    - relative position
+    - relative velocity
+    - distance
+    - radius or safety size
+    - valid mask
+
+latent_obstacle:
+  per obstacle:
+    - relative position
+    - current velocity if active, otherwise zero or masked
+    - is_active
+    - semantic type / risk class
+    - distance-to-risk-region, if observable
+    - radius or safety size
+    - valid mask
 ```
 
-必须固定 K、sorting rule、normalization、padding value、mask convention。
+## 6. Lidar / raycast contract
 
-### 5.3 latent semantic obstacle
+Lidar / raycast 几何可以参考 NavRL。优先级：
 
-这是本项目相对 NavRL 的扩展。不得给 policy 未来随机触发信息。
+```text
+1. 如果 NavRL 源码有明确 ray count / angular layout，优先参考 NavRL。
+2. 如果 NavRL 数值不适合 PyBullet scale，按 PyBullet 适配，并在 alignment table 说明原因。
+3. 如果找不到明确设置，使用下面的 fallback contract。
+```
 
-允许：
+Fallback contract：
+
+```text
+num_rays: 72
+fov: 360 degrees
+ray plane: horizontal plane around current drone z, optionally clamped near nominal flight altitude
+coordinate frame: ego/local frame
+max_range: PyBullet-compatible value, e.g. 5m initially
+normalization: min(distance, max_range) / max_range
+missing hit: 1.0
+included in lidar: static cylinders
+not included in lidar by default: dynamic obstacles, latent obstacles
+```
+
+实现要求：
+
+```text
+- tests 可以先用 deterministic scenario-geometry raycast
+- runtime 可以用 PyBullet rayTestBatch，但必须和 contract 一致
+- default static obstacle geometry is cylinder
+- cylinder footprint must be represented correctly in horizontal scan
+- NaN / inf lidar values are forbidden
+```
+
+## 7. Latent semantic obstacle boundary
+
+Latent semantic obstacle 是 PIRL-NavRL 扩展，不要求 NavRL 已有对应模块。
+
+核心原则：
+
+```text
+Policy can observe current semantic risk prior.
+Policy cannot observe future event labels.
+```
+
+允许进入 observation：
 
 ```text
 relative position
 current velocity if active
 is_active
-semantic type or risk class
+semantic type / risk class as current observable prior
 distance-to-risk-region if observable
+radius or safety size
 valid mask
 ```
 
-不得包含：
+禁止进入 observation：
 
 ```text
 future_activation_step
 will_activate_in_n_steps
-future trajectory unavailable to a real policy
+future sampled trajectory
+future motion direction if inactive and unobservable
+future speed if inactive and unobservable
+hidden trigger random seed
+will_collide_with_drone
 ```
 
-第一版语义类别固定为：
+第一版 semantic classes：
 
 ```text
 static_like_latent
@@ -219,49 +302,214 @@ crossing_latent
 sudden_latent
 ```
 
-每类定义 trigger_radius_range、activation_delay_range、speed_range、motion_direction_rule、risk role。
+这些 class 表示当前可观察的语义风险先验，不表示 policy 知道未来一定发生什么。
 
-## 6. Action
-
-Action 主线保持 velocity-style：
+每类必须在 curriculum config 中定义：
 
 ```text
-policy outputs normalized desired velocity
-adapter clips by max_speed
-gym-pybullet-drones executes velocity command
+trigger_radius_range
+activation_delay_range
+speed_range
+motion_direction_rule
+risk role
 ```
 
-必须记录 raw_action、clipped_action、desired_velocity、actual_velocity、tracking_error、action_clipping_fraction、altitude behavior。若 action/control tracking 不稳定，先修 action/control，不先调 reward。
+这些生成参数用于环境，不直接暴露给 policy。
 
-## 7. Reward
+## 8. Action and control tracking contract
 
-新增或更新：
+Action 参考 NavRL-style velocity semantics。
+
+主线：
 
 ```text
-configs/task08_navrl_aligned_reward.json
-docs/task08_reward_alignment_report.md
+policy outputs normalized velocity command in [-1, 1]
+action_adapter clips by max_speed
+gym-pybullet-drones executes desired velocity
+identity_safety_filter passes action unchanged in TASK_08
 ```
 
-Reward 结构严格参考 NavRL 代码中的 safe navigation reward：
+第一版建议：
 
 ```text
-reward = progress
-       + goal_success
+action_dim: 3
+meaning: desired velocity x/y/z
+z behavior: constrained and diagnosed
+```
+
+如果 gym-pybullet-drones z tracking 不稳定，可以降级为：
+
+```text
+action_dim: 2
+meaning: desired velocity x/y
+z behavior: altitude hold
+```
+
+必须记录：
+
+```text
+raw_action
+clipped_action
+desired_velocity
+actual_velocity
+velocity_tracking_error
+action_clipping_fraction
+altitude_error / altitude_drift
+```
+
+成功标准可以参考 NavRL 的诊断思路，但阈值必须按 gym-pybullet-drones 实测定。
+
+Candidate thresholds：
+
+```text
+tracking pass:
+  mean_velocity_tracking_error <= 0.35 * max_speed
+
+tracking warning:
+  0.35 * max_speed < mean_velocity_tracking_error <= 0.60 * max_speed
+
+tracking blocked:
+  mean_velocity_tracking_error > 0.60 * max_speed
+  or altitude instability appears
+
+action clipping pass for easy levels:
+  action_clipping_fraction <= 0.30
+
+action clipping pass for promotion:
+  action_clipping_fraction <= 0.20
+
+action clipping blocked:
+  action_clipping_fraction > 0.50 and learning depends on clipped commands
+```
+
+硬规则：如果 action/control tracking 不稳定，先修 action/control，不先调 reward。
+
+## 9. Reward contract
+
+Reward 结构参考 NavRL safe-navigation reward。系数先从 NavRL code/config 找来源，再按 PyBullet scale 适配。
+
+主线 reward：
+
+```text
+reward = progress_reward
+       + goal_success_reward
        - collision_penalty
-       - clearance_or_static_risk_penalty
+       - static_clearance_or_lidar_risk_penalty
        - dynamic_obstacle_risk_penalty
        - action_or_smoothness_penalty
        - timeout_penalty
        - latent_semantic_risk_penalty
 ```
 
-报告必须说明 NavRL reward code term 到本项目 term 的映射、初始系数来源、哪些严格参考、哪些因 PyBullet 尺度调整、reward_terms_stats、每次系数变化原因。
+`configs/task08_navrl_aligned_reward.json` 必须记录：
 
-只允许 evidence-based one-time scaling adaptation；如果一次调整后仍无 learning signal，写 blocked 或回到诊断模块，不继续盲调。
+```text
+term name
+NavRL source file / config
+NavRL coefficient if available
+PIRL-NavRL initial coefficient
+scale adaptation reason
+status: candidate / validated / frozen / blocked
+```
 
-## 8. Forest curriculum
+`docs/task08_reward_alignment_report.md` 必须说明：
 
-新增或更新：
+```text
+NavRL reward term -> PIRL-NavRL reward term mapping
+which terms are strictly referenced
+which terms are PyBullet-adapted
+which terms are PIRL-NavRL extensions
+reward term statistics before/after adjustment
+reason for every coefficient change
+```
+
+### 9.1 Coefficient source priority
+
+```text
+1. Use exact NavRL code/config coefficient if directly applicable.
+2. Use NavRL relative term magnitude and rescale to PyBullet units.
+3. If NavRL coefficient is absent, derive from reward scale budget and document why.
+```
+
+Reward scale budget guideline：
+
+```text
+goal_success_reward:
+  should dominate one episode of small shaping rewards
+
+collision_penalty:
+  should make direct collision shortcut unattractive
+
+progress_reward:
+  should provide dense learning signal but not overwhelm collision safety
+
+static/dynamic risk:
+  should affect path choice before collision
+
+action/smoothness:
+  should regularize, not prevent movement
+
+latent risk:
+  should start lower than collision/static risk because it is semantic prior, not guaranteed collision
+```
+
+### 9.2 One-time scaling adaptation rule
+
+Reward 不能无限调。
+
+允许：
+
+```text
+NavRL candidate coefficients
+-> PyBullet scale normalization
+-> easy curriculum diagnostics
+-> one evidence-based scaling adaptation
+-> freeze or blocked
+```
+
+一次 adjustment 可以包含：
+
+```text
+progress scale
+static/dynamic/latent risk scale
+success/collision terminal magnitude
+action/smoothness scale
+```
+
+不允许：
+
+```text
+failed once就随意改 reward
+为了制造 success 降低 eval 难度
+每次训练失败都继续换系数
+不看 diagnostics 直接调 reward
+```
+
+不算 reward tuning 的情况：
+
+```text
+fix sign bug
+fix unit normalization bug
+fix collision detection bug
+fix reward term missing from log
+fix observation/control bug that made reward meaningless
+```
+
+调整 reward 前必须有：
+
+```text
+reward_terms_stats.json
+distance_curve.json
+action_control_tracking.json
+obs_stats.json
+lidar_stats.json
+dynamic_obstacle_stats.json
+latent_obstacle_stats.json
+```
+
+## 10. Forest curriculum contract
+
+新增：
 
 ```text
 pirl_navrl/scenarios/task08_navrl_forest_curriculum.py
@@ -277,11 +525,33 @@ latent_semantic_forest_easy / medium / hard
 mixed_forest_target
 ```
 
-`configs/task08_navrl_forest_curriculum.json` 必须给出具体数值，包括 arena size、static/dynamic/latent obstacle count、density、radius、speed、trigger/risk radius、semantic class distribution、goal distance、episode horizon。
+训练路线：
 
-`mixed_forest_target` 是 NavRL-style high-density target / stress test，不作为第一训练入口。
+```text
+static_forest_easy
+-> dynamic_forest_easy
+-> latent_semantic_forest_easy
+-> medium levels
+-> hard levels
+-> mixed_forest_target stress test
+```
 
-## 9. Training scripts and budget
+`mixed_forest_target` 只作为 target / stress test，不作为第一训练入口。
+
+Config 必须给具体数值：
+
+```text
+arena size
+static obstacle count / density / radius range
+dynamic obstacle count / speed range
+latent obstacle count / semantic distribution / trigger or risk radius
+goal distance
+episode horizon
+fixed train seeds
+fixed eval seeds
+```
+
+## 11. Training scripts and budget
 
 新增：
 
@@ -292,55 +562,129 @@ scripts/eval_task08_navrl_aligned_policy.py
 scripts/render_task08_topdown_cases.py
 ```
 
-支持 `--mode smoke|train|eval|blocked` 和 `--curriculum-level ...`。
-
-`configs/task08_training_budget.json` 必须明确 smoke_steps、debug_train_steps、full_train_steps、num_envs、num_seeds、promotion criteria、blocked criteria。
-
-## 10. Promotion / blocked criteria
-
-新增：
+脚本支持：
 
 ```text
-docs/task08_promotion_block_criteria.md
+--mode smoke
+--mode train
+--mode eval
+--mode blocked
+--curriculum-level static_forest_easy|dynamic_forest_easy|latent_semantic_forest_easy|...
 ```
 
-最小晋级标准：
+Budget config 必须明确：
 
 ```text
-heuristic mean final_distance < random mean final_distance
-trained mean final_distance < random mean final_distance
-trained collision rate <= random collision rate + documented tolerance
-trained timeout rate not materially worse than random
-reward curve is not collapsed
-action clipping fraction below documented threshold
+smoke_steps
+debug_train_steps
+full_train_steps
+num_envs
+num_seeds
+eval_episodes
+checkpoint interval under ignored outputs
+promotion criteria
+blocked criteria
+```
+
+Candidate budget：
+
+```text
+smoke_steps: 4096
+debug_train_steps: 50000
+full_train_steps_easy: 300000
+full_train_steps_medium: 500000
+num_envs: 4
+num_train_seeds: 3
+eval_episodes_per_level: 8 or 16
+```
+
+这些是 candidate。实现时可根据机器资源调整，但必须记录原因。
+
+## 12. Evaluation and promotion/block criteria
+
+每个关键 level 至少评估：
+
+```text
+random policy
+heuristic policy
+trained PPO policy
+```
+
+Heuristic 不是论文 baseline，只是 sanity check。
+
+推荐判断：
+
+```text
+heuristic beats random:
+  scene/action/observation likely feasible
+
+trained beats random:
+  learning signal exists
+
+trained approaches heuristic on easy:
+  training stack is usable
+
+heuristic fails:
+  suspect scene/action/observation/control
+
+heuristic succeeds but trained fails:
+  suspect reward/PPO/observation scaling
+```
+
+Promotion candidate thresholds：
+
+```text
+mean final_distance improvement over random >= 10%
+trained collision rate <= random collision rate + 10 percentage points
+trained timeout rate <= random timeout rate + 10 percentage points
+reward curve not collapsed
+action_clipping_fraction <= promotion threshold
 obs/lidar/dynamic/latent stats finite and non-degenerate
 ```
 
-不满足时，不能进入更难 level，必须写 blocked reason 或修复对应模块。
+如果不满足，不能进入更难 level。必须修对应模块或写 blocked reason。
 
-## 11. Evaluation and replay
+## 13. Diagnostics and outputs
 
-每个关键 level 评估 random / heuristic / trained。固定 eval seeds 和 level configs 必须写入报告。
-
-Top-down replay 至少展示 drone trajectory、start/goal、static footprints、dynamic paths、latent semantic activation/active state、success/collision/timeout/failure type。不要提交 GIF / MP4 / outputs。
-
-## 12. Camera and safety boundary
-
-Task08 不做真实 RGB-D perception stack。使用 PyBullet/scenario raycast 模拟 NavRL policy 输入前的结构化中间表示。
-
-Task08 不使用 raw RGB / RGB-D policy input，不做 CNN vision encoder。Camera 只能 diagnostic / visualization。
-
-Task08 只保留 safety shield placeholder / identity interface：
+训练和 eval 必须写到 ignored `outputs/`：
 
 ```text
-policy_output -> identity_safety_filter -> action_adapter
+obs_stats.json
+lidar_stats.json
+dynamic_obstacle_stats.json
+latent_obstacle_stats.json
+reward_terms_stats.json
+action_control_tracking.json
+distance_curve.json
+training_completion_status.json
+eval_summary_random_heuristic_trained.json
 ```
 
-正式 NavRL-style safety shield adaptation 放到 TASK_09。
+不要提交 outputs、checkpoints、GIF、MP4、TensorBoard、wandb。
 
-## 13. Diagnostics and reports
+## 14. Top-down replay
 
-必须输出到 ignored `outputs/`：obs_stats、lidar_stats、dynamic_obstacle_stats、latent_obstacle_stats、reward_terms_stats、action_control_tracking、training_completion_status、eval_summary_random_heuristic_trained。
+必须生成 PyBullet top-down replay 或 fallback summary。
+
+Replay 至少展示：
+
+```text
+drone trajectory
+start / goal
+static obstacle footprints
+dynamic obstacle paths
+latent semantic obstacle activation / active state
+success / collision / timeout / failure type
+```
+
+推荐第一版：
+
+```text
+primary: matplotlib or PyBullet top-down GIF/PNG generated from JSONL
+fallback: JSON summary + static PNG
+```
+
+## 15. Reports
 
 新增：
 
@@ -355,36 +699,77 @@ docs/TASK_08_COMPLETION_REPORT.md
 docs/TASK_08_BLOCKED_REPORT.md
 ```
 
-Report 必须说明 studied NavRL code files/configs、strictly aligned items、PyBullet adaptations、latent semantic extension、Task07 failure analysis、observation stats、reward alignment, curriculum numeric levels, fixed eval seeds, random/heuristic/trained comparison, diagnostics, replay cases, whether Task09 can start.
+Report 必须说明：
 
-## 14. 验收标准
+```text
+which NavRL code files/configs were studied
+what is strictly aligned with NavRL
+what is adapted for PyBullet scale
+what is PIRL-NavRL latent semantic extension
+observation schema and stats
+lidar geometry
+reward alignment and final weights
+curriculum numeric levels and fixed eval seeds
+random / heuristic / trained comparison
+action/control tracking diagnostics
+training curves and diagnostics
+top-down replay or fallback summary
+whether TASK_09 can start
+```
+
+## 16. Completion criteria
 
 TASK_08 完成时必须满足：
 
-1. `pytest -q` 通过；
-2. `docs/task08_navrl_source_index.md` 完成；
-3. `docs/task08_navrl_alignment_table.md` 完成；
-4. `docs/TASK_08_FROM_TASK_07_FAILURE_ANALYSIS.md` 完成；
-5. `docs/task08_observation_contract.md` 完成；
-6. 主线 observation 使用 NavRL-style dict：`state / direction / lidar / dynamic_obstacle`，并明确 latent extension；
-7. lidar/raycast observation 有具体配置、归一化、统计诊断；
-8. dynamic_obstacle features 有 K、排序、padding、mask、归一化；
-9. latent semantic dynamic obstacle features 不泄露未来 trigger label；
-10. semantic classes 有明确定义；
-11. action 为 velocity-style，并有 tracking diagnostics；
-12. reward structure 对齐 NavRL code-style safe navigation reward，并记录系数来源和调整证据；
-13. forest curriculum 有具体 numeric config；
-14. training budget 有具体 steps / seeds / envs / promotion / blocked criteria；
-15. 不直接从 target forest 起训；
-16. fixed eval seeds 和 fixed level configs 已记录；
-17. random / heuristic / trained 对比完成；
-18. 至少 easy static / dynamic / latent semantic levels 显示 learning signal，或写清 blocked reason；
-19. 有 top-down replay 或 fallback summary；
-20. 没有达到预期效果时写 blocked report，而不是继续盲调；
+1. `pytest -q` 通过。
+2. `docs/task08_navrl_source_index.md` 完成。
+3. `docs/task08_navrl_alignment_table.md` 完成。
+4. `docs/TASK_08_FROM_TASK_07_FAILURE_ANALYSIS.md` 完成；如果 Task07 信息不足，要说明不足。
+5. `docs/task08_observation_contract.md` 完成。
+6. 主线 observation 使用 NavRL-style dict schema，并有 fixed flatten order。
+7. lidar/raycast 有具体 geometry、normalization 和统计诊断。
+8. dynamic_obstacle features 有 K、排序、padding、mask、归一化。
+9. latent semantic obstacle 不泄露未来 trigger / trajectory / activation time。
+10. semantic classes 定义清楚。
+11. action 是 velocity-style，并有 tracking diagnostics。
+12. reward structure 对齐 NavRL code-style safe-navigation reward。
+13. reward 系数来源、PyBullet scale adaptation 和 one-time adjustment 记录清楚。
+14. forest curriculum 有 numeric config。
+15. 不直接从 `mixed_forest_target` 起训。
+16. fixed eval seeds 和 fixed level configs 已记录。
+17. random / heuristic / trained 对比完成。
+18. 至少 easy static / dynamic / latent semantic levels 显示 learning signal，或写清 blocked reason。
+19. 有 top-down replay 或 fallback summary。
+20. 没有达到预期效果时写 blocked report，不继续盲调。
 21. 不提交 outputs、checkpoints、GIF、MP4、TensorBoard、wandb。
 
-## 15. 明确不做
+## 17. Completed / blocked definition
 
-TASK_08 不做 formal paper success-rate table、full sim-to-real experiment、real RGB-D perception stack、EGO baseline、PIRL final risk module、NavRL reproduction claim、formal NavRL benchmark reproduction。
+```text
+completed_success:
+  static_forest_easy, dynamic_forest_easy, latent_semantic_forest_easy all show learning signal;
+  reports, tests, diagnostics, and replay/fallback are complete.
 
-TASK_08 完成后，如果 NavRL-aligned curriculum 能稳定学习，进入 TASK_09 safety shield、TASK_10 latent semantic risk / PIRL module、TASK_11 formal evaluation。
+completed_blocked:
+  engineering pipeline, contracts, diagnostics, and reports are complete;
+  one or more easy levels fail;
+  blocked reason is specific and evidence-based.
+
+TASK_09 can start:
+  observation/action/reward/curriculum interfaces are stable;
+  safety filter placeholder interface exists;
+  at least static + dynamic easy behavior is usable, or limitations are clearly documented.
+```
+
+## 18. 开工前待确认的问题
+
+请确认这些点，确认后再进入实现：
+
+1. `external/NavRL` 是否固定到当前本地 commit？是否需要把 commit hash 写入 source index？
+2. 第一版 action 用 3D velocity，还是 2D velocity + altitude hold？
+3. Lidar fallback 是否接受 `72 rays / 360 degrees / max_range 5m`？
+4. Dynamic obstacles 是否保持不进入 lidar，只进入 `dynamic_obstacle` channel？
+5. Latent semantic type 是否允许作为“当前可观察风险先验”进入 observation？
+6. Reward 的 one-time scaling adaptation 是否按“每个 reward profile / curriculum family 一次”理解？
+7. Candidate training budget 是否接受：smoke 4096、debug 50k、easy full 300k、medium full 500k、4 envs、3 train seeds？
+8. Promotion threshold 是否接受：final distance 至少比 random 好 10%，collision/timeout 不比 random 多 10 个百分点以上？
